@@ -35,6 +35,8 @@ const Register = () => {
         }
     };
 
+
+
     const validateForm = () => {
         const newErrors = {};
 
@@ -59,7 +61,7 @@ const Register = () => {
         if (!formData.phone) {
             newErrors.phone = 'Phone number is required';
         } else if (!/^\d{11}$/.test(formData.phone.replace(/\D/g, ''))) {
-            newErrors.phone = 'Phone number must be 10 digits';
+            newErrors.phone = 'Phone number must be 11 digits';
         }
 
         // Password validation
@@ -86,7 +88,7 @@ const Register = () => {
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
         if (validateForm()) {
             setIsLoading(true);
@@ -102,15 +104,17 @@ const Register = () => {
                     phone_number: formData.phone,
                 };
 
-                const response = await authAPI.register(registrationData);
+                authAPI.register(registrationData)
+                    .then((data) => {
+                        console.log("User created successfully");
+                        navigate('/login', {replace: true});
+                    }
+                    )
+                    .catch((error) => {
+                    console.log("User already exists");
 
-                // Store tokens and user data
-                localStorage.setItem('accessToken', response.data.access);
-                localStorage.setItem('refreshToken', response.data.refresh);
-                localStorage.setItem('userData', JSON.stringify(response.data.user));
+                    })
 
-                // Redirect to dashboard
-                navigate('/dashboard');
             } catch (error) {
                 const serverErrors = error.response?.data || {};
                 const formattedErrors = {};
@@ -366,33 +370,6 @@ const Register = () => {
                             </button>
                         </div>
                     </form>
-
-                    {/* Social Registration */}
-                    <div className="mt-6">
-                        <div className="relative">
-                            <div className="absolute inset-0 flex items-center">
-                                <div className="w-full border-t border-gray-300"/>
-                            </div>
-                            <div className="relative flex justify-center text-sm">
-                                <span className="px-2 bg-white text-gray-500">Or continue with</span>
-                            </div>
-                        </div>
-
-                        <div className="mt-6 grid grid-cols-2 gap-3">
-                            <button
-                                type="button"
-                                className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-                            >
-                                Google
-                            </button>
-                            <button
-                                type="button"
-                                className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-                            >
-                                GitHub
-                            </button>
-                        </div>
-                    </div>
                 </div>
             </div>
             <div className="sm:mx-auto sm:w-full sm:max-w-md">
