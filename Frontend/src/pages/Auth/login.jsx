@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
-import { authAPI } from '../../services/api';
+import React, {useState} from 'react';
+import {Link, useNavigate} from 'react-router-dom';
+import {Mail, Lock, Eye, EyeOff} from 'lucide-react';
+import {authAPI} from '../../services/api';
+import {useSelector, useDispatch} from 'react-redux'
+import {loginSuccess} from "../../redux/slices/authSlice.js";
 
 const Login = () => {
     const navigate = useNavigate();
+    const {user} = useSelector(state => state.auth);
     const [formData, setFormData] = useState({
         email: '',
         password: '',
@@ -12,9 +15,10 @@ const Login = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [errors, setErrors] = useState({});
     const [isLoading, setIsLoading] = useState(false);
+    const dispatch = useDispatch();
 
     const handleChange = (e) => {
-        const { name, value } = e.target;
+        const {name, value} = e.target;
         setFormData(prev => ({
             ...prev,
             [name]: value
@@ -45,34 +49,40 @@ const Login = () => {
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
+
         if (validateForm()) {
             setIsLoading(true);
-            try {
-                const loginData = {
-                    username: formData.email,
-                    password: formData.password,
-                };
 
-                const response = await authAPI.login(loginData);
+            const loginData = {
+                username: formData.email, // Adjust if backend expects "email"
+                password: formData.password,
+            };
 
-                // Store tokens and user data
-                localStorage.setItem('accessToken', response.data.access);
-                localStorage.setItem('refreshToken', response.data.refresh);
-                localStorage.setItem('userData', JSON.stringify(response.data.user));
+            authAPI.login(loginData)
+                .then((response) => {
+                    const data = response.data; // Extract data from response
+                    console.log("response.data", data);
 
-                // Redirect to dashboard
-                navigate('/dashboard');
-            } catch (error) {
-                setErrors({
-                    submit: error.response?.data?.detail || 'Login failed. Please try again.'
+                    dispatch(loginSuccess(data));
+
+                    // Redirect to dashboard
+                    navigate('/home');
+
+                })
+                .catch((error) => {
+                    console.error("Error logging in", error);
+                    setErrors({
+                        submit: error.response?.data?.detail || 'Login failed. Please try again.'
+                    });
+                })
+                .finally(() => {
+                    setIsLoading(false);
                 });
-            } finally {
-                setIsLoading(false);
-            }
         }
     };
+
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
@@ -190,32 +200,6 @@ const Login = () => {
                         </div>
                     </form>
 
-                    {/* Social Login */}
-                    <div className="mt-6">
-                        <div className="relative">
-                            <div className="absolute inset-0 flex items-center">
-                                <div className="w-full border-t border-gray-300"/>
-                            </div>
-                            <div className="relative flex justify-center text-sm">
-                                <span className="px-2 bg-white text-gray-500">Or continue with</span>
-                            </div>
-                        </div>
-
-                        <div className="mt-6 grid grid-cols-2 gap-3">
-                            <button
-                                type="button"
-                                className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-                            >
-                                Google
-                            </button>
-                            <button
-                                type="button"
-                                className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-                            >
-                                GitHub
-                            </button>
-                        </div>
-                    </div>
                 </div>
             </div>
 

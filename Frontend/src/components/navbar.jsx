@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from "react-redux";
+import { logout } from "../redux/slices/authSlice.js";
 
 const NavBar = () => {
     const [isOpen, setIsOpen] = useState(false);
     const navigate = useNavigate();
+    const { user, isAuthenticated } = useSelector(state => state.auth);
+    const dispatch = useDispatch();
 
     const handleLogin = () => {
         navigate('/login');
@@ -13,6 +17,14 @@ const NavBar = () => {
     const handleRegister = () => {
         navigate('/register');
     };
+
+    const handleLogout = () => {
+        dispatch(logout());
+        navigate("/login");
+    };
+
+    // Helper function to safely display user name
+    const displayName = user?.first_name ? `Welcome, ${user.first_name}` : "Welcome";
 
     return (
         <nav className="bg-white shadow-lg">
@@ -35,16 +47,29 @@ const NavBar = () => {
 
                     {/* Right side - Auth Buttons (Hidden on mobile) */}
                     <div className="hidden md:flex items-center space-x-4">
-                        <button
-                            onClick={handleLogin}
-                            className="px-4 py-2 text-gray-600 hover:text-gray-900">
-                            Login
-                        </button>
-                        <button
-                            onClick={handleRegister}
-                            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
-                            Register
-                        </button>
+                        {isAuthenticated ? (
+                            <>
+                                <span className="text-gray-700">{displayName}</span>
+                                <button
+                                    onClick={handleLogout}
+                                    className="px-4 py-2 text-gray-600 hover:text-gray-900">
+                                    Logout
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <button
+                                    onClick={handleLogin}
+                                    className="px-4 py-2 text-gray-600 hover:text-gray-900">
+                                    Login
+                                </button>
+                                <button
+                                    onClick={handleRegister}
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                                    Register
+                                </button>
+                            </>
+                        )}
                     </div>
 
                     {/* Mobile menu button */}
@@ -53,7 +78,7 @@ const NavBar = () => {
                             onClick={() => setIsOpen(!isOpen)}
                             className="inline-flex items-center justify-center p-2 rounded-md text-gray-600 hover:text-gray-900 focus:outline-none"
                         >
-                            {isOpen ? <X size={24} /> : <Menu size={24} />}
+                            {isOpen ? <X size={24}/> : <Menu size={24}/>}
                         </button>
                     </div>
                 </div>
@@ -66,18 +91,29 @@ const NavBar = () => {
                             <Link to="/products" className="block px-3 py-2 text-gray-600 hover:text-gray-900">Products</Link>
                             <Link to="/about" className="block px-3 py-2 text-gray-600 hover:text-gray-900">About</Link>
                             <Link to="/contact" className="block px-3 py-2 text-gray-600 hover:text-gray-900">Contact</Link>
-                            <div className="pt-4 space-y-2">
-                                <button
-                                    onClick={handleLogin}
-                                    className="w-full px-4 py-2 text-left text-gray-600 hover:text-gray-900">
-                                    Login
-                                </button>
-                                <button
-                                    onClick={handleRegister}
-                                    className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
-                                    Register
-                                </button>
-                            </div>
+                            {isAuthenticated ? (
+                                <div className="pt-4 space-y-2">
+                                    <span className="block px-3 py-2 text-gray-700">{displayName}</span>
+                                    <button
+                                        onClick={handleLogout}
+                                        className="w-full px-4 py-2 text-left text-gray-600 hover:text-gray-900">
+                                        Logout
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="pt-4 space-y-2">
+                                    <button
+                                        onClick={handleLogin}
+                                        className="w-full px-4 py-2 text-left text-gray-600 hover:text-gray-900">
+                                        Login
+                                    </button>
+                                    <button
+                                        onClick={handleRegister}
+                                        className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                                        Register
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
