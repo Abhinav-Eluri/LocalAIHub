@@ -1,6 +1,6 @@
 from django.utils import timezone
 from django.utils.timezone import now
-from rest_framework import mixins
+from rest_framework import mixins, status
 from rest_framework.decorators import action
 from django.contrib.auth import get_user_model
 from django.contrib.auth import authenticate
@@ -45,9 +45,17 @@ class AuthViewSet(viewsets.GenericViewSet,mixins.CreateModelMixin, mixins.ListMo
 
     @action(detail=False, methods=['post'])
     def logout(self, request):
+        """Blacklist the refresh token to log the user out"""
+        try:
+            refresh_token = request.data.get("refresh_token")
+            if not refresh_token:
+                return Response({"error": "Refresh token is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        print("I am in logout")
-        return Response({"message": "Logout"})
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+            return Response({"message": "Successfully logged out"}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False, methods=['post'])
     def register(self, request):
@@ -61,3 +69,15 @@ class AuthViewSet(viewsets.GenericViewSet,mixins.CreateModelMixin, mixins.ListMo
                                  )
 
         return Response({"message": "Register"})
+
+    @action(detail=False, methods=['post'])
+    def reset_password(self, request):
+        email = request.data.get('email')
+        user = User.objects.filter(username=email).first()
+
+        if user is None:
+            return Response({"message": f"No account found with email {email}"},
+                            status=400)  # Use f-string for string interpolation
+
+        # Logic for sending reset password email goes here...
+        return Response({"message": "Email sent"})

@@ -4,6 +4,9 @@ import {Mail, Lock, Eye, EyeOff} from 'lucide-react';
 import {authAPI} from '../../services/api';
 import {useSelector, useDispatch} from 'react-redux'
 import {loginSuccess} from "../../redux/slices/authSlice.js";
+import {useDialog} from "../../hooks/use-dialog.js";
+import Dialog from "../../components/dialog.jsx";
+import ForgotPasswordDialog from "../../components/dialogs/forgot-password-dialog.jsx";
 
 const Login = () => {
     const navigate = useNavigate();
@@ -16,6 +19,7 @@ const Login = () => {
     const [errors, setErrors] = useState({});
     const [isLoading, setIsLoading] = useState(false);
     const dispatch = useDispatch();
+    const forgotPasswordDialog = useDialog()
 
     const handleChange = (e) => {
         const {name, value} = e.target;
@@ -165,27 +169,6 @@ const Login = () => {
                             )}
                         </div>
 
-                        {/* Remember Me & Forgot Password */}
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center">
-                                <input
-                                    id="remember-me"
-                                    name="remember-me"
-                                    type="checkbox"
-                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                                />
-                                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
-                                    Remember me
-                                </label>
-                            </div>
-
-                            <div className="text-sm">
-                                <Link to="/forgot-password" className="font-medium text-blue-600 hover:text-blue-500">
-                                    Forgot your password?
-                                </Link>
-                            </div>
-                        </div>
-
                         {/* Submit Button */}
                         <div>
                             <button
@@ -199,6 +182,18 @@ const Login = () => {
                             </button>
                         </div>
                     </form>
+                    {/* Forgot Password */}
+                    <div className="flex items-center justify-end">
+                        <div className="text-sm mt-2">
+                            <button
+                                onClick={forgotPasswordDialog.handleOpen}
+                                className="font-medium text-blue-600 hover:text-blue-500"
+                            >
+                                Forgot your password?
+                            </button>
+
+                        </div>
+                    </div>
 
                 </div>
             </div>
@@ -211,6 +206,7 @@ const Login = () => {
                     </Link>
                 </p>
             </div>
+            <ForgotPasswordDialog open={forgotPasswordDialog.open} onClose={forgotPasswordDialog.handleClose} />
         </div>
     );
 };

@@ -30,6 +30,12 @@ export const authAPI = {
     login: (credentials) =>
         axiosInstance.post('/api/auth/login/', credentials),
 
+    logout: (refreshToken) =>
+        axiosInstance.post('/api/auth/logout/', {refresh_token: refreshToken}),
+
+    forgotPassword: (email) =>
+        axiosInstance.post('/api/auth/reset_password/', email),
+
     getProfile: () =>
         axiosInstance.get('/api/auth/profile/'),
 };
