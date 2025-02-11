@@ -19,8 +19,13 @@ const NavBar = () => {
         navigate('/register');
     };
 
-    const handleLogout = () => {
-        authAPI.logout(refreshToken);
+    const handleLogout = async() => {
+        if (!refreshToken) {
+            console.error('No refresh token found');
+            return;
+        }
+
+        await authAPI.logout({ refresh_token: refreshToken })
         dispatch(logout());
         navigate("/login");
     };

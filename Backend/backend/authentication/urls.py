@@ -5,14 +5,17 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
 
-from .views import AuthViewSet
+from .views import AuthViewSet, AIChatViewSet, SlotViewSet
 
 router = DefaultRouter()
 router.register(r'auth', AuthViewSet, basename='auth')
+router.register(r'chat', AIChatViewSet, basename='aichat')
+router.register(r'slot', SlotViewSet,basename='slot')
 
 urlpatterns = [
     path('', include(router.urls)),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+
 
 ]

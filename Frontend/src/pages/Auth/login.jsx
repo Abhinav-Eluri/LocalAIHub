@@ -67,8 +67,6 @@ const Login = () => {
             authAPI.login(loginData)
                 .then((response) => {
                     const data = response.data; // Extract data from response
-                    console.log("response.data", data);
-
                     dispatch(loginSuccess(data));
 
                     // Redirect to dashboard

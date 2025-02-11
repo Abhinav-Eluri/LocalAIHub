@@ -1,6 +1,8 @@
 import React from 'react';
 import { ArrowRight, ShoppingBag, Shield, Truck, Clock } from 'lucide-react';
 import {useSelector} from "react-redux";
+import SplitText from "../blocks/TextAnimations/SplitText/SplitText.jsx";
+import StarBorder from "../blocks/Animations/StarBorder/StarBorder.jsx";
 
 const Home = () => {
     const {user, isAuthenticated} = useSelector(state => state.auth);
@@ -11,13 +13,10 @@ const Home = () => {
                 <div className="max-w-7xl mx-auto px-4 py-24 sm:px-6 lg:px-8">
                     <div className="text-center">
                         {isAuthenticated ? (
-                            <h1 className="text-4xl font-bold sm:text-5xl lg:text-6xl">
-                                Welcome {user?.first_name}
-                            </h1>
+                            <SplitText text={`Welcome ${user.first_name}`} className="text-4xl text-bold"/>
                         ): (
-                            <h1 className="text-4xl font-bold sm:text-5xl lg:text-6xl">
-                                Welcome to Our Store
-                            </h1>
+                            <SplitText text={`Welcome to Our Store`} />
+
                         )
                         }
 
@@ -25,10 +24,10 @@ const Home = () => {
                             Discover amazing products at unbeatable prices
                         </p>
                         <div className="mt-10">
-                            <button className="bg-white text-blue-600 px-8 py-3 rounded-lg font-medium hover:bg-blue-50 transition-colors duration-300 inline-flex items-center">
-                                Shop Now
-                                <ArrowRight className="ml-2 h-5 w-5" />
-                            </button>
+                                <button className="bg-white text-blue-600 px-8 py-3 rounded-lg font-medium hover:bg-blue-50 transition-colors duration-300 inline-flex items-center">
+                                    Shop Now
+                                    <ArrowRight className="ml-2 h-5 w-5" />
+                                </button>
                         </div>
                     </div>
                 </div>
