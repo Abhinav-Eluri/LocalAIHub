@@ -143,6 +143,9 @@ export const chatAPI = {
     getChat: (chatId) =>
         axiosInstance.get(`/api/chat/${chatId}`),
 
+    deleteChat: (chatId) =>
+        axiosInstance.delete(`/api/chat/${chatId}`),
+
 
 };
 

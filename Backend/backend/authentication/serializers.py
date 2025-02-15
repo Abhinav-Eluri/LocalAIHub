@@ -1,7 +1,7 @@
 from rest_framework.serializers import ModelSerializer
 from django.contrib.auth import get_user_model
 
-from .models import Product, AIChat, Slot
+from .models import AIChat, Slot, Message
 
 # Uses the Django User model if nothing is set in particular in settings.py
 # Add this AUTH_USER_MODEL = 'authentication.CustomUser' in settings.py to use the CustomUser model
@@ -16,15 +16,16 @@ class UserSerializer(ModelSerializer):
             'password': {'write_only': True}
         }
 
+class MessageSerializer(ModelSerializer):
+    class Meta:
+        model = Message
+        fields='__all__'
+
+
 class AIChatSerializer(ModelSerializer):
+    messages = MessageSerializer(many=True, read_only=True)
     class Meta:
         model = AIChat
-        fields = '__all__'
-
-
-class ProductSerializer(ModelSerializer):
-    class Meta:
-        model = Product
         fields = '__all__'
 
 class SlotSerializer(ModelSerializer):

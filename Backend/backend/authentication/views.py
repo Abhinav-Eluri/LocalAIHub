@@ -8,6 +8,7 @@ from django.http import StreamingHttpResponse
 from dotenv import load_dotenv
 
 from django.utils import timezone
+from psycopg.pq import error_message
 from rest_framework.renderers import BaseRenderer
 from django.utils.timezone import now
 from rest_framework import mixins, status
@@ -21,9 +22,10 @@ from rest_framework_simplejwt.tokens import RefreshToken, Token, AccessToken
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, IsAdminUser
 
 from .models import Product, AIChat, Message, Slot, Participant
-from .serializers import UserSerializer, ProductSerializer, AIChatSerializer, SlotSerializer
+from .serializers import UserSerializer, AIChatSerializer, SlotSerializer
 from rest_framework.response import Response
-from rest_framework import viewsets
+
+from .services.factory import AIProviderFactory
 
 load_dotenv()
 openai.api_key = os.environ.get("OPENAI_API_KEY")
@@ -114,6 +116,46 @@ class AIChatViewSet(ModelViewSet):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.OPENAI_MODELS = [
+            "gpt-3.5-turbo","gpt-4o","gpt-4o-mini", "gpt-4", "gpt-4-turbo",
+            "gpt-3.5-turbo-16k", "gpt-4-32k",
+
+        ]
+
+        self.CLAUDE_MODELS = [
+            "claude-3-opus", "claude-3-sonnet", "claude-3-haiku"
+        ]
+
+        self.GEMINI_MODELS = [
+            "gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.0-flash-lite-preview-02-05",
+            "gemini-1.5-flash-8b", "gemini-1.5-pro"
+        ]
+
+    def get_provider_for_model(self, model_name: str):
+        """Get the appropriate provider and API key for a model"""
+        if model_name in self.OPENAI_MODELS:
+            return AIProviderFactory.create_provider(
+                "openai",
+                os.environ.get("OPENAI_API_KEY")
+            )
+
+        if model_name in self.CLAUDE_MODELS:
+            return AIProviderFactory.create_provider(
+                "claude",
+                os.environ.get("ANTHROPIC_API_KEY")
+            )
+
+        if model_name in self.GEMINI_MODELS:
+            return AIProviderFactory.create_provider(
+                "gemini",
+                os.environ.get("GEMINI_API_KEY")
+            )
+
+        raise ValueError(f"Unsupported model: {model_name}")
+
     def create(self, request, *args, **kwargs):
         user_id = request.data.get("user_id")
         user = User.objects.filter(id=user_id).first()
@@ -170,20 +212,66 @@ class AIChatViewSet(ModelViewSet):
                     status=status.HTTP_404_NOT_FOUND
                 )
 
+            try:
+                # Get provider instance directly
+                provider = self.get_provider_for_model(chat.model)
+            except ValueError as e:
+                return Response(
+                    {"error": str(e)},  # This will contain "Unsupported model: model_name"
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Get previous messages
+            previous_messages = Message.objects.filter(chat=chat).order_by('created_at')
+
+            # Format messages for OpenAI
+            messages_for_ai = []
+
+            # Add previous messages
+            for msg in previous_messages:
+                role = "assistant" if msg.sender == "assistant" else "user"
+                messages_for_ai.append({
+                    "role": role,
+                    "content": msg.content
+                })
+
+            # Add current message
+            messages_for_ai.append({
+                "role": "user",
+                "content": content
+            })
+
+            # Save the user message
+            Message.objects.create(
+                chat=chat,
+                content=content,
+                sender='user'
+            )
+
             # SSE streaming implementation
             def event_stream():
                 try:
-                    stream = openai.chat.completions.create(
-                        model="gpt-3.5-turbo",
-                        messages=[{"role": "user", "content": content}],
-                        stream=True,
+                    complete_response = ""
+                    for chunk in provider.generate_stream(messages_for_ai, chat.model):
+                        complete_response += chunk
+                        yield f"data: {json.dumps({'content': chunk})}\n\n"
+
+                    # Save the assistant message
+                    Message.objects.create(
+                        chat=chat,
+                        content=complete_response,
+                        sender='assistant'
                     )
-                    for chunk in stream:
-                        if chunk.choices[0].delta.content:
-                            yield f"data: {json.dumps({'content': chunk.choices[0].delta.content})}\n\n"
                     yield f"data: {json.dumps({'content': '[DONE]'})}\n\n"
+
                 except Exception as e:
-                    yield f"data: {json.dumps({'error': str(e)})}\n\n"
+                    error_message = str(e)
+                    Message.objects.create(
+                        chat=chat,
+                        content=f"Error: {error_message}",
+                        sender='assistant'
+                    )
+                    yield f"data: {json.dumps({'error': error_message})}\n\n"
 
             response = StreamingHttpResponse(
                 event_stream(),
@@ -201,8 +289,7 @@ class AIChatViewSet(ModelViewSet):
 
 # Badminton
 
-class SlotViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin,
-                  mixins.UpdateModelMixin):
+class SlotViewSet(ModelViewSet):
     queryset = Slot.objects.all()
     serializer_class = SlotSerializer
     permission_classes = []

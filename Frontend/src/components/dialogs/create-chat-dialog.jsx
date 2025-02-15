@@ -59,9 +59,15 @@ function CreateChatDialog(props) {
                     >
                         <option value="" disabled className="text-gray-500">Select a model</option>
                         <optgroup label="GPT Models" className="text-gray-900">
-                            <option value="gpt-3.5" className="text-gray-900">GPT 3.5 Turbo</option>
+                            <option value="gpt-3.5-turbo" className="text-gray-900">GPT 3.5 Turbo</option>
                             <option value="gpt-4o-mini" className="text-gray-900">GPT 4.0 Mini</option>
                             <option value="gpt-4o" className="text-gray-900">GPT 4.0</option>
+                            <option value="gpt-4o-realtime-preview" className="text-gray-900">GPT 4.0 Realtime Preview</option>
+                            <option value="gemini-1.5-pro" className="text-gray-900">GEMINI 1.5 PRO</option>
+                            <option value="gemini-1.5-flash" className={"text-gray-900"}>Gemini 1.5 Flash</option>
+                            <option value="gemini-1.5-flash-8b" className={"text-gray-900"}>Gemini 1.5 Flash-8B</option>
+                            <option value="gemini-2.0-flash-lite-preview-02-05" className="text-gray-900">Gemini 2.0 Flash-Lite Preview</option>
+                            <option value="gemini-2.0-flash" className="text-gray-900">Gemini 2.0 Flash</option>
                         </optgroup>
                         <optgroup label="Reasoning Models" className="text-gray-900">
                             <option value="o1" className="text-gray-900">GPT o1</option>

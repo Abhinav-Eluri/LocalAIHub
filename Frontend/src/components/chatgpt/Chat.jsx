@@ -19,25 +19,34 @@ const CodeBlock = ({ code }) => {
 
     return (
         <div className="relative my-2 w-full">
-            <pre className="bg-gray-950 p-4 rounded-lg overflow-x-auto">
-                <code className="text-sm font-mono text-gray-200">{code}</code>
-            </pre>
-            <button
-                onClick={handleCopy}
-                className="absolute top-2 right-2 p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors duration-200"
-                title={copied ? "Copied!" : "Copy to clipboard"}
-            >
-                {copied ? (
-                    <Check className="w-4 h-4 text-green-500" />
-                ) : (
-                    <Copy className="w-4 h-4 text-gray-400" />
-                )}
-            </button>
+            <div className="bg-gray-950 dark:bg-gray-800 rounded-lg">
+                {/* Code header with copy button */}
+                <div className="flex justify-end px-4 py-2 border-b border-gray-800 dark:border-gray-700">
+                    <button
+                        onClick={handleCopy}
+                        className="p-2 rounded-lg bg-gray-800 dark:bg-gray-700 hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors duration-200"
+                        title={copied ? "Copied!" : "Copy to clipboard"}
+                    >
+                        {copied ? (
+                            <Check className="w-4 h-4 text-green-500" />
+                        ) : (
+                            <Copy className="w-4 h-4 text-gray-400 dark:text-gray-300" />
+                        )}
+                    </button>
+                </div>
+                {/* Code content with better overflow handling */}
+                <div className="overflow-x-auto">
+                    <pre className="p-4 m-0">
+                        <code className="text-sm font-mono text-gray-200 dark:text-gray-100 whitespace-pre-wrap break-all">
+                            {code}
+                        </code>
+                    </pre>
+                </div>
+            </div>
         </div>
     );
 };
 
-// Message Content Component for handling code formatting
 const MessageContent = ({ content }) => {
     const isCodeBlock = (text) => {
         return text.includes('```') || text.includes('def ') || text.includes('class ') ||
@@ -47,7 +56,7 @@ const MessageContent = ({ content }) => {
 
     const formatContent = (text) => {
         if (!isCodeBlock(text)) {
-            return <p className="text-sm whitespace-pre-wrap">{text}</p>;
+            return <p className="text-sm whitespace-pre-wrap break-words">{text}</p>;
         }
 
         const parts = text.split(/(```[\s\S]*?```)/g);
@@ -62,19 +71,63 @@ const MessageContent = ({ content }) => {
                 return <CodeBlock key={index} code={part} />;
             }
 
-            return <p key={index} className="text-sm whitespace-pre-wrap">{part}</p>;
+            return <p key={index} className="text-sm whitespace-pre-wrap break-words">{part}</p>;
         });
     };
 
     return (
-        <div className="space-y-2">
+        <div className="space-y-2 w-full">
             {formatContent(content)}
         </div>
     );
 };
 
-// Main Chat Component
+// Add keyframes for animation
+const styles = `
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(1rem);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in-up {
+    animation: fadeInUp 0.3s ease-out;
+}
+`;
+
 const Chat = ({ selectedChat }) => {
+    // Add the styles to the document
+    useEffect(() => {
+        const styleSheet = document.createElement("style");
+        styleSheet.textContent = styles;
+        document.head.appendChild(styleSheet);
+        return () => {
+            document.head.removeChild(styleSheet);
+        };
+    }, []);
+
+    // Theme initialization
+    const [isDarkMode, setIsDarkMode] = useState(() => {
+        const savedTheme = localStorage.getItem('theme');
+        return savedTheme === 'dark';
+    });
+
+    // Theme toggle effect
+    useEffect(() => {
+        if (isDarkMode) {
+            document.documentElement.classList.add('dark');
+            localStorage.setItem('theme', 'dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+            localStorage.setItem('theme', 'light');
+        }
+    }, [isDarkMode]);
+
     const [message, setMessage] = useState('');
     const [chat, setChat] = useState({});
     const [messages, setMessages] = useState([]);
@@ -161,39 +214,39 @@ const Chat = ({ selectedChat }) => {
     return (
         <>
             {selectedChat ? (
-                <div className="min-h-screen flex flex-col bg-gray-900">
+                <div className="min-h-screen flex flex-col bg-gray-900 dark:bg-gray-100">
                     {/* Chat Header */}
-                    <div className="border-b border-gray-800 p-4">
-                        <h2 className="text-lg font-semibold text-white">{chat?.name}</h2>
-                        <h5 className="text-sm font-semibold text-gray-600">{chat?.model}</h5>
+                    <div className="border-b border-gray-800 dark:border-gray-200 p-4">
+                        <h2 className="text-lg font-semibold text-white dark:text-gray-800">{chat?.name}</h2>
+                        <h5 className="text-sm font-semibold text-gray-600 dark:text-gray-500">{chat?.model}</h5>
                     </div>
 
                     {/* Messages Area */}
                     <div className="flex-1 overflow-y-auto p-4 space-y-4">
                         {messages.map((msg) => (
                             <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`flex max-w-3xl ${msg.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                                <div className={`flex max-w-[85%] ${msg.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
                                     {/* Avatar */}
                                     <div className="flex-shrink-0">
                                         <div className={`w-8 h-8 rounded-full flex items-center justify-center
-                                            ${msg.sender === 'user' ? 'bg-blue-600 ml-2' : 'bg-gray-700 mr-2'}`}>
+                                            ${msg.sender === 'user' ? 'bg-blue-600 ml-2' : 'bg-gray-700 dark:bg-gray-400 mr-2'}`}>
                                             {msg.sender === 'user' ?
                                                 <User className="w-5 h-5 text-white" /> :
-                                                <Bot className="w-5 h-5 text-white" />}
+                                                <Bot className="w-5 h-5 text-white dark:text-gray-800" />}
                                         </div>
                                     </div>
 
                                     {/* Message Bubble */}
-                                    <div className={`group relative px-4 py-2 rounded-lg
-                                        ${msg.sender === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-200'}`}>
+                                    <div className={`group relative px-4 py-2 rounded-lg w-full overflow-hidden
+                                        ${msg.sender === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-800 dark:bg-gray-200 text-gray-200 dark:text-gray-800'}`}>
                                         <MessageContent content={msg.content} />
-                                        <span className="absolute bottom-0 text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                                        <span className="absolute bottom-0 text-xs text-gray-400 dark:text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                                               style={{
                                                   [msg.sender === 'user' ? 'right' : 'left']: '10px',
                                                   transform: 'translateY(100%)',
                                                   paddingTop: '4px'
                                               }}>
-                                            {formatTime(msg.timestamp)}
+                                            {formatTime(msg?.created_at)}
                                         </span>
                                     </div>
                                 </div>
@@ -203,20 +256,20 @@ const Chat = ({ selectedChat }) => {
                     </div>
 
                     {/* Message Input */}
-                    <div className="border-t border-gray-800 p-4">
+                    <div className="border-t border-gray-800 dark:border-gray-200 p-4">
                         <form onSubmit={handleSubmit} className="flex gap-2">
                             <input
                                 type="text"
                                 value={message}
                                 onChange={(e) => setMessage(e.target.value)}
                                 placeholder="Type your message..."
-                                className="flex-1 bg-gray-800 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="flex-1 bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-800 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                                 disabled={isLoading}
                             />
                             <button
                                 type="submit"
                                 disabled={!message.trim() || isLoading}
-                                className="inline-flex items-center justify-center p-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                                className="inline-flex items-center justify-center p-2 text-white dark:text-white bg-blue-600 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
                             >
                                 <Send className="w-5 h-5" />
                             </button>
@@ -224,8 +277,8 @@ const Chat = ({ selectedChat }) => {
                     </div>
                 </div>
             ) : (
-                <div className="min-h-screen flex items-center justify-center bg-gray-900">
-                    <h1 className="text-xl text-white">Select a chat to preview</h1>
+                <div className="min-h-screen flex items-center justify-center bg-gray-900 dark:bg-gray-100">
+                    <h1 className="text-xl text-white dark:text-gray-800">Select a chat to preview</h1>
                 </div>
             )}
         </>

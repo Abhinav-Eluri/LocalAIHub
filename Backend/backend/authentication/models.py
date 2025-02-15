@@ -41,7 +41,7 @@ class AIChat(models.Model):
 
 
 class Message(models.Model):
-    MESSAGE_TYPES = (
+    SENDER_TYPES = (
         ('user', 'User Message'),
         ('assistant', 'Assistant Message'),
     )
@@ -52,9 +52,9 @@ class Message(models.Model):
         related_name='messages'
     )
     content = models.TextField()
-    message_type = models.CharField(
+    sender = models.CharField(
         max_length=20,
-        choices=MESSAGE_TYPES,
+        choices=SENDER_TYPES,
         default='user'
     )
     created_at = models.DateTimeField(auto_now_add=True)
