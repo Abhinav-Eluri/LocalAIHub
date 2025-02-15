@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Dialog, { DialogActions, DialogContent, DialogTitle } from "../dialog.jsx";
 import { Calendar, Clock, Users, CheckCircle, XCircle } from 'lucide-react';
-import { BadmintonAPI } from "../../services/api.js";
+import { badmintonAPI } from "../../services/api.js";
 
 function SlotDialog({ open, onClose, onSuccess, data }) {
     const [loading, setLoading] = useState(false);
@@ -30,7 +30,7 @@ function SlotDialog({ open, onClose, onSuccess, data }) {
     const handleSubmit = async () => {
         try {
             setLoading(true);
-            const response = await BadmintonAPI.addParticipant({ name: name, slotId: data.id });
+            const response = await badmintonAPI.addParticipant({ name: name, slotId: data.id });
             setAlert({
                 show: true,
                 message: response.data.message,

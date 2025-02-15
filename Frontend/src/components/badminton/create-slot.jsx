@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BadmintonAPI } from "../../services/api.js";
+import { badmintonAPI } from "../../services/api.js";
 
 const CreateSlotForm = () => {
     const [formData, setFormData] = useState({
@@ -18,7 +18,7 @@ const CreateSlotForm = () => {
             max_participants: parseInt(formData.maxParticipants)
         };
         try {
-            const response = await BadmintonAPI.createSlot({slot_data: slotData});
+            const response = await badmintonAPI.createSlot({slot_data: slotData});
             setFormData({
                 gameDate: '',
                 duration: '',

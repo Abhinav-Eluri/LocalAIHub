@@ -1,14 +1,23 @@
+import json
+import os
+from http.client import responses
+
 import openai
+from django.core.exceptions import ObjectDoesNotExist
+from django.http import StreamingHttpResponse
+from dotenv import load_dotenv
 
 from django.utils import timezone
+from rest_framework.renderers import BaseRenderer
 from django.utils.timezone import now
 from rest_framework import mixins, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, renderer_classes
 from django.contrib.auth import get_user_model
 from django.contrib.auth import authenticate
 from rest_framework.status import HTTP_201_CREATED
+from rest_framework.viewsets import ModelViewSet
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.tokens import RefreshToken, Token, AccessToken
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, IsAdminUser
 
 from .models import Product, AIChat, Message, Slot, Participant
@@ -16,11 +25,21 @@ from .serializers import UserSerializer, ProductSerializer, AIChatSerializer, Sl
 from rest_framework.response import Response
 from rest_framework import viewsets
 
+load_dotenv()
+openai.api_key = os.environ.get("OPENAI_API_KEY")
 
 User = get_user_model()
 
 
-class AuthViewSet(viewsets.GenericViewSet,mixins.CreateModelMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.UpdateModelMixin):
+class EventStreamRenderer(BaseRenderer):
+    media_type = 'text/event-stream'
+    format = 'text-event-stream'
+
+    def render(self, data, accepted_media_type=None, renderer_context=None):
+        return data
+
+
+class AuthViewSet(ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = []
@@ -67,7 +86,7 @@ class AuthViewSet(viewsets.GenericViewSet,mixins.CreateModelMixin, mixins.ListMo
     def register(self, request):
         print("I am in register")
         User.objects.create_user(username=request.data.get('username'),
-                                 email=request.data.get("password") ,
+                                 email=request.data.get("password"),
                                  password=request.data.get('password'),
                                  first_name=request.data.get('first_name'),
                                  last_name=request.data.get('last_name')
@@ -88,21 +107,14 @@ class AuthViewSet(viewsets.GenericViewSet,mixins.CreateModelMixin, mixins.ListMo
         # Logic for sending reset password email goes here...
         return Response({"message": "Email sent"})
 
-class ProductViewSet(viewsets.GenericViewSet,mixins.CreateModelMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.UpdateModelMixin):
-    queryset = Product.objects.all()
-    serializer_class = ProductSerializer
 
-    def images(self):
-        return []
-
-class AIChatViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.UpdateModelMixin):
+class AIChatViewSet(ModelViewSet):
     queryset = AIChat.objects.all()
     serializer_class = AIChatSerializer
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def create(self, request, *args, **kwargs):
-        data = request.data
         user_id = request.data.get("user_id")
         user = User.objects.filter(id=user_id).first()
         chat = AIChat(
@@ -114,20 +126,83 @@ class AIChatViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin, mixins.Lis
 
         return Response(AIChatSerializer(chat).data, status=HTTP_201_CREATED)
 
-    @action(detail=False, methods=['get'])
-    def request_response(self, request):
-        chat_id = request.data.get("chat_id")
-        content = request.data.get("message")
-        chat = AIChat.objects.filter(id=chat_id).first()
-        if not chat:
-            raise Exception("Chat not available")
-        message = Message(content=content, message_type="user")
-        message.chat= chat
-        message.save()
+    @action(detail=True, methods=['get'], url_path="stream",
+            renderer_classes=[EventStreamRenderer],
+            authentication_classes=[], permission_classes=[])
+    def stream(self, request, pk=None):
+        """
+        Streams AI-generated responses via Server-Sent Events (SSE).
+        Authentication is done via a token in the query parameters.
+        """
+        try:
+            # Token validation
+            token = request.GET.get("token")
+            if not token:
+                return Response(
+                    {"error": "Token missing"},
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
 
-        # Now make a call to chatgpt API
+            try:
+                decoded_token = AccessToken(token)
+                user = User.objects.get(id=decoded_token["user_id"])
+            except Exception as e:
+                return Response(
+                    {"error": "Invalid token"},
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
 
-class SlotViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.UpdateModelMixin):
+            # Parameter validation
+            chat_id = pk
+            content = request.GET.get("message")
+
+            if not chat_id or not content:
+                return Response(
+                    {"error": "Missing chat_id or message"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Chat validation
+            chat = AIChat.objects.filter(id=chat_id, user=user).first()
+            if not chat:
+                return Response(
+                    {"error": "Chat not found or access denied"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # SSE streaming implementation
+            def event_stream():
+                try:
+                    stream = openai.chat.completions.create(
+                        model="gpt-3.5-turbo",
+                        messages=[{"role": "user", "content": content}],
+                        stream=True,
+                    )
+                    for chunk in stream:
+                        if chunk.choices[0].delta.content:
+                            yield f"data: {json.dumps({'content': chunk.choices[0].delta.content})}\n\n"
+                    yield f"data: {json.dumps({'content': '[DONE]'})}\n\n"
+                except Exception as e:
+                    yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+            response = StreamingHttpResponse(
+                event_stream(),
+                content_type='text/event-stream'
+            )
+            response['Cache-Control'] = 'no-cache'
+            response['X-Accel-Buffering'] = 'no'
+            return response
+
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+# Badminton
+
+class SlotViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin,
+                  mixins.UpdateModelMixin):
     queryset = Slot.objects.all()
     serializer_class = SlotSerializer
     permission_classes = []
@@ -183,8 +258,3 @@ class SlotViewSet(viewsets.GenericViewSet, mixins.CreateModelMixin, mixins.ListM
                 {"error": "Failed to add participant"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
-
-
-
-

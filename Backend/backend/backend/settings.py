@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/4.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
-
+from datetime import timedelta
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -24,7 +24,6 @@ SECRET_KEY = 'django-insecure-ttiktlpt&w5e1w&y^qj1*2@6!)fm(v@(z-zz36p1p(+i9^wi23
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
 
 # Application definition
 
@@ -123,7 +122,7 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",  # React/Frontend running locally
+    "http://localhost:5173",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -132,7 +131,19 @@ CORS_ALLOW_HEADERS = [
     'content-type',
     'authorization',
     'x-requested-with',
+    "cache-control",  # Added this
+    "connection",  # Added this
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
 ]
+
+CORS_EXPOSE_HEADERS = ['Content-Type', 'X-CSRFToken']
 
 AUTH_USER_MODEL = 'authentication.CustomUser'
 
@@ -146,3 +157,12 @@ REST_FRAMEWORK = {
     ],
 
 }
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': False,  # Don't create new refresh token on refresh
+    'BLACKLIST_AFTER_ROTATION': True,
+}
+
+ALLOWED_HOSTS = []

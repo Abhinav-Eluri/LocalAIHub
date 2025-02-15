@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Users, Calendar, Clock } from 'lucide-react';
 import { useDialog } from "../../hooks/use-dialog.js";
 import SlotDialog from "./slot-dialog.jsx";
-import { BadmintonAPI } from "../../services/api.js";
+import { badmintonAPI } from "../../services/api.js";
 
 const SlotCard = ({ slot, onClick }) => {
     const formatDateTime = (dateTime) => {
@@ -54,7 +54,7 @@ const AvailableSlots = () => {
     useEffect(() => {
         const fetchSlots = async () => {
             try {
-                const response = await BadmintonAPI.getSlots();
+                const response = await badmintonAPI.getSlots();
                 setSlots(response.data);
             } catch (error) {
                 console.error('Error fetching slots:', error);

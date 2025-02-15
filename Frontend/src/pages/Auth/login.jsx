@@ -66,6 +66,7 @@ const Login = () => {
 
             authAPI.login(loginData)
                 .then((response) => {
+                    console.log(response.data)
                     const data = response.data; // Extract data from response
                     dispatch(loginSuccess(data));
 
