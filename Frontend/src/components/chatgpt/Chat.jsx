@@ -1,139 +1,95 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Send, User, Bot, Copy, Check } from 'lucide-react';
-import { chatAPI } from "../../services/api.js";
+import { Send, User, Bot, Clipboard, Check } from 'lucide-react';
 import { useSelector } from "react-redux";
-import config from "../../config/index.js";
+import ReactMarkdown from 'react-markdown';
+import "highlight.js/styles/github-dark.css";
+import { chatAPI } from "../../services/api";
+import config from "../../config";
 
-const CodeBlock = ({ code }) => {
+const CodeBlock = ({ node, inline, className, children, ...props }) => {
     const [copied, setCopied] = useState(false);
+    const code = String(children).replace(/\n$/, '');
+    const isFencedCodeBlock = className?.includes('language-');
 
-    const handleCopy = async () => {
-        try {
-            await navigator.clipboard.writeText(code);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-        } catch (err) {
-            console.error('Failed to copy:', err);
-        }
-    };
-
-    return (
-        <div className="relative my-2 w-full">
-            <div className="bg-gray-950 dark:bg-gray-800 rounded-lg">
-                {/* Code header with copy button */}
-                <div className="flex justify-end px-4 py-2 border-b border-gray-800 dark:border-gray-700">
-                    <button
-                        onClick={handleCopy}
-                        className="p-2 rounded-lg bg-gray-800 dark:bg-gray-700 hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors duration-200"
-                        title={copied ? "Copied!" : "Copy to clipboard"}
-                    >
-                        {copied ? (
-                            <Check className="w-4 h-4 text-green-500" />
-                        ) : (
-                            <Copy className="w-4 h-4 text-gray-400 dark:text-gray-300" />
-                        )}
-                    </button>
-                </div>
-                {/* Code content with better overflow handling */}
-                <div className="overflow-x-auto">
-                    <pre className="p-4 m-0">
-                        <code className="text-sm font-mono text-gray-200 dark:text-gray-100 whitespace-pre-wrap break-all">
-                            {code}
-                        </code>
-                    </pre>
-                </div>
+    if (isFencedCodeBlock) {
+        return (
+            <div className="relative group my-2">
+                <pre className="bg-gray-800/95 dark:bg-gray-200/95 rounded-lg p-2 sm:p-3 overflow-x-auto">
+                    <code className="text-gray-200 dark:text-gray-800 font-mono text-[10px] xs:text-xs sm:text-sm" {...props}>
+                        {code}
+                    </code>
+                </pre>
+                <button
+                    onClick={async () => {
+                        try {
+                            await navigator.clipboard.writeText(code);
+                            setCopied(true);
+                            setTimeout(() => setCopied(false), 2000);
+                        } catch (err) {
+                            console.error('Failed to copy:', err);
+                        }
+                    }}
+                    className="absolute top-1.5 right-1.5 p-1 sm:p-1.5 rounded-md bg-gray-700/90 hover:bg-gray-600
+                             text-gray-300 opacity-0 group-hover:opacity-100 transition-all duration-200"
+                >
+                    {copied ? <Check className="w-3 h-3" /> : <Clipboard className="w-3 h-3" />}
+                </button>
             </div>
-        </div>
+        );
+    }
+
+    return inline ? (
+        <span className="px-1 py-0.5 bg-gray-600 dark:bg-black rounded text-[11px] sm:text-sm font-mono text-blue-400">
+            {code}
+        </span>
+    ) : (
+        <code {...props}>{children}</code>
     );
 };
 
 const MessageContent = ({ content }) => {
-    const isCodeBlock = (text) => {
-        return text.includes('```') || text.includes('def ') || text.includes('class ') ||
-            text.includes('function') || text.includes('import ') || text.includes('const ') ||
-            text.includes('let ') || text.includes('var ');
-    };
-
-    const formatContent = (text) => {
-        if (!isCodeBlock(text)) {
-            return <p className="text-sm whitespace-pre-wrap break-words">{text}</p>;
-        }
-
-        const parts = text.split(/(```[\s\S]*?```)/g);
-
-        return parts.map((part, index) => {
-            if (part.startsWith('```') && part.endsWith('```')) {
-                const code = part.slice(3, -3).replace(/^[a-z]+\n/, '');
-                return <CodeBlock key={index} code={code} />;
-            }
-
-            if (isCodeBlock(part)) {
-                return <CodeBlock key={index} code={part} />;
-            }
-
-            return <p key={index} className="text-sm whitespace-pre-wrap break-words">{part}</p>;
-        });
-    };
-
     return (
-        <div className="space-y-2 w-full">
-            {formatContent(content)}
+        <div className="prose prose-invert dark:prose-light max-w-full">
+            <ReactMarkdown
+                components={{
+                    code: CodeBlock,
+                    p: ({ children }) => (
+                        <p className="text-xs sm:text-sm md:text-base mb-2 leading-relaxed">{children}</p>
+                    ),
+                    ul: ({ children }) => (
+                        <ul className="space-y-1 my-2 list-disc pl-4">{children}</ul>
+                    ),
+                    ol: ({ children }) => (
+                        <ol className="space-y-1 my-2 list-decimal pl-4">{children}</ol>
+                    ),
+                    li: ({ children }) => (
+                        <li className="text-xs sm:text-sm">{children}</li>
+                    ),
+                    h1: ({ children }) => (
+                        <h1 className="text-base sm:text-lg font-bold mb-2 mt-3">{children}</h1>
+                    ),
+                    h2: ({ children }) => (
+                        <h2 className="text-sm sm:text-base font-bold mb-2 mt-3">{children}</h2>
+                    ),
+                    h3: ({ children }) => (
+                        <h3 className="text-xs sm:text-sm font-bold mb-1 mt-2">{children}</h3>
+                    ),
+                }}
+            >
+                {content}
+            </ReactMarkdown>
         </div>
     );
 };
 
-// Add keyframes for animation
-const styles = `
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(1rem);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.animate-fade-in-up {
-    animation: fadeInUp 0.3s ease-out;
-}
-`;
-
 const Chat = ({ selectedChat }) => {
-    // Add the styles to the document
-    useEffect(() => {
-        const styleSheet = document.createElement("style");
-        styleSheet.textContent = styles;
-        document.head.appendChild(styleSheet);
-        return () => {
-            document.head.removeChild(styleSheet);
-        };
-    }, []);
-
-    // Theme initialization
-    const [isDarkMode, setIsDarkMode] = useState(() => {
-        const savedTheme = localStorage.getItem('theme');
-        return savedTheme === 'dark';
-    });
-
-    // Theme toggle effect
-    useEffect(() => {
-        if (isDarkMode) {
-            document.documentElement.classList.add('dark');
-            localStorage.setItem('theme', 'dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-            localStorage.setItem('theme', 'light');
-        }
-    }, [isDarkMode]);
-
     const [message, setMessage] = useState('');
     const [chat, setChat] = useState({});
     const [messages, setMessages] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const messagesEndRef = useRef(null);
     const { accessToken } = useSelector(state => state.auth);
+    const messageInputRef = useRef(null);
 
     useEffect(() => {
         if (selectedChat) {
@@ -185,6 +141,7 @@ const Chat = ({ selectedChat }) => {
                 if (data.content === '[DONE]') {
                     setIsLoading(false);
                     eventSource.close();
+                    messageInputRef.current?.focus();
                     return;
                 }
 
@@ -206,82 +163,99 @@ const Chat = ({ selectedChat }) => {
         };
     };
 
-    const formatTime = (timestamp) => new Date(timestamp).toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit'
-    });
+    if (!selectedChat) {
+        return (
+            <div className="flex flex-col items-center justify-center h-full bg-gray-900 dark:bg-gray-100 p-4">
+                <Bot className="w-12 h-12 text-gray-600 dark:text-gray-400 mb-4" />
+                <h2 className="text-xl font-semibold text-white dark:text-gray-800 mb-2">
+                    Welcome to Chat
+                </h2>
+                <p className="text-gray-400 dark:text-gray-600 text-center max-w-md">
+                    Select a chat from the sidebar or create a new one to start messaging
+                </p>
+            </div>
+        );
+    }
 
     return (
-        <>
-            {selectedChat ? (
-                <div className="min-h-screen flex flex-col bg-gray-900 dark:bg-gray-100">
-                    {/* Chat Header */}
-                    <div className="border-b border-gray-800 dark:border-gray-200 p-4">
-                        <h2 className="text-lg font-semibold text-white dark:text-gray-800">{chat?.name}</h2>
-                        <h5 className="text-sm font-semibold text-gray-600 dark:text-gray-500">{chat?.model}</h5>
-                    </div>
-
-                    {/* Messages Area */}
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                        {messages.map((msg) => (
-                            <div key={msg.id} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`flex max-w-[85%] ${msg.sender === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                                    {/* Avatar */}
-                                    <div className="flex-shrink-0">
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center
-                                            ${msg.sender === 'user' ? 'bg-blue-600 ml-2' : 'bg-gray-700 dark:bg-gray-400 mr-2'}`}>
-                                            {msg.sender === 'user' ?
-                                                <User className="w-5 h-5 text-white" /> :
-                                                <Bot className="w-5 h-5 text-white dark:text-gray-800" />}
-                                        </div>
-                                    </div>
-
-                                    {/* Message Bubble */}
-                                    <div className={`group relative px-4 py-2 rounded-lg w-full overflow-hidden
-                                        ${msg.sender === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-800 dark:bg-gray-200 text-gray-200 dark:text-gray-800'}`}>
-                                        <MessageContent content={msg.content} />
-                                        <span className="absolute bottom-0 text-xs text-gray-400 dark:text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                                              style={{
-                                                  [msg.sender === 'user' ? 'right' : 'left']: '10px',
-                                                  transform: 'translateY(100%)',
-                                                  paddingTop: '4px'
-                                              }}>
-                                            {formatTime(msg?.created_at)}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                        <div ref={messagesEndRef} />
-                    </div>
-
-                    {/* Message Input */}
-                    <div className="border-t border-gray-800 dark:border-gray-200 p-4">
-                        <form onSubmit={handleSubmit} className="flex gap-2">
-                            <input
-                                type="text"
-                                value={message}
-                                onChange={(e) => setMessage(e.target.value)}
-                                placeholder="Type your message..."
-                                className="flex-1 bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-800 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-                                disabled={isLoading}
-                            />
-                            <button
-                                type="submit"
-                                disabled={!message.trim() || isLoading}
-                                className="inline-flex items-center justify-center p-2 text-white dark:text-white bg-blue-600 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-                            >
-                                <Send className="w-5 h-5" />
-                            </button>
-                        </form>
-                    </div>
+        <div className="flex flex-col h-full">
+            {/* Chat Header */}
+            <div className="border-b border-gray-800 dark:border-gray-200 bg-gray-800/50 dark:bg-gray-200/50">
+                <div className="px-3 py-2 sm:px-4 sm:py-3">
+                    <h2 className="text-sm sm:text-base md:text-lg font-semibold text-white dark:text-gray-800 truncate">
+                        {chat?.name || 'New Chat'}
+                    </h2>
+                    <p className="text-[10px] sm:text-xs md:text-sm text-gray-400 dark:text-gray-600">
+                        {chat?.model || 'AI Assistant'}
+                    </p>
                 </div>
-            ) : (
-                <div className="min-h-screen flex items-center justify-center bg-gray-900 dark:bg-gray-100">
-                    <h1 className="text-xl text-white dark:text-gray-800">Select a chat to preview</h1>
-                </div>
-            )}
-        </>
+            </div>
+
+            {/* Messages Area */}
+            <div className="flex-1 overflow-y-auto p-2 sm:p-4 space-y-4">
+                {messages.map((msg) => (
+                    <div
+                        key={msg.id}
+                        className={`flex items-start gap-2 ${msg.sender === 'user' ? 'flex-row-reverse' : ''}`}
+                    >
+                        {/* Avatar */}
+                        <div className={`flex-shrink-0 rounded-full p-1 sm:p-1.5 
+                            ${msg.sender === 'user'
+                            ? 'bg-blue-600/20'
+                            : 'bg-gray-700/20 dark:bg-gray-300/20'}`}
+                        >
+                            {msg.sender === 'user' ? (
+                                <User className="w-3 h-3 sm:w-4 sm:h-4 text-blue-400" />
+                            ) : (
+                                <Bot className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400 dark:text-gray-600" />
+                            )}
+                        </div>
+
+                        {/* Message Content */}
+                        <div className={`px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg break-words
+                            ${msg.sender === 'user'
+                            ? 'bg-blue-600 text-white ml-auto mr-8 sm:mr-12 max-w-[85%] sm:max-w-[75%] md:max-w-[65%]'
+                            : 'bg-gray-800 dark:bg-gray-200 text-gray-100 dark:text-gray-800 mr-auto ml-8 sm:ml-12 max-w-[85%] sm:max-w-[75%] md:max-w-[65%]'}`}
+                        >
+                            <MessageContent content={msg.content} />
+                        </div>
+                    </div>
+                ))}
+                <div ref={messagesEndRef} />
+            </div>
+
+            {/* Message Input */}
+            <div className="border-t border-gray-800 dark:border-gray-200 bg-gray-800/50 dark:bg-gray-200/50">
+                <form onSubmit={handleSubmit} className="p-2 ">
+                    <div className="flex items-center gap-2 max-w-[850px] mx-auto">
+                        <input
+                            ref={messageInputRef}
+                            type="text"
+                            value={message}
+                            onChange={(e) => setMessage(e.target.value)}
+                            placeholder={isLoading ? "Please wait..." : "Type your message..."}
+                            disabled={isLoading}
+                            className="flex-1 bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-800
+                                     rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2
+                                     text-xs sm:text-sm md:text-base
+                                     focus:outline-none focus:ring-2 focus:ring-blue-500
+                                     dark:focus:ring-blue-400 disabled:opacity-50
+                                     placeholder-gray-500 dark:placeholder-gray-400"
+                        />
+                        <button
+                            type="submit"
+                            disabled={!message.trim() || isLoading}
+                            className="p-1.5 sm:p-2 text-white bg-blue-600 rounded-lg
+                                     hover:bg-blue-700 focus:outline-none focus:ring-2
+                                     focus:ring-blue-500 disabled:opacity-50
+                                     disabled:hover:bg-blue-600 transition-all duration-200"
+                        >
+                            <Send className="w-3 h-3 sm:w-4 sm:h-4" />
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     );
 };
 

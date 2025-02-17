@@ -1,11 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { MessageSquare, PlusIcon, Trash2, X, ChevronLeft, ChevronRight } from "lucide-react";
-import CreateChatDialog from "../dialogs/create-chat-dialog.jsx";
-import { useDialog } from "../../hooks/use-dialog.js";
-import { chatAPI } from "../../services/api.js";
+import { MessageSquare, PlusIcon, Trash2, X, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 import { useSelector } from "react-redux";
+import { chatAPI } from "../../services/api.js";
 
-// Delete Alert Dialog Component
+// Delete Alert Dialog Component remains in Sidebar as it's specific to chat deletion
 const DeleteAlert = ({ isOpen, onClose, onConfirm, chatName }) => {
     if (!isOpen) return null;
 
@@ -49,42 +47,36 @@ const DeleteAlert = ({ isOpen, onClose, onConfirm, chatName }) => {
     );
 };
 
-function Sidebar({ setSelectedChat, onCollapseChange }) {
-    const createChatDialog = useDialog();
+function Sidebar({ setSelectedChat, onCollapseChange, onNewChat }) {
     const { user } = useSelector(state => state.auth);
-    const [chats, setChats] = useState([]);
+    const [allChats, setAllChats] = useState([]);
+    const [visibleChats, setVisibleChats] = useState([]);
     const [chatToDelete, setChatToDelete] = useState(null);
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [isCollapsed, setIsCollapsed] = useState(false);
+    const [page, setPage] = useState(1);
+    const CHATS_PER_PAGE = 5;
 
-    // Theme initialization
-    const [isDarkMode, setIsDarkMode] = useState(() => {
-        const savedTheme = localStorage.getItem('theme');
-        return savedTheme === 'dark';
-    });
-
-    // Theme toggle effect
-    useEffect(() => {
-        if (isDarkMode) {
-            document.documentElement.classList.add('dark');
-            localStorage.setItem('theme', 'dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-            localStorage.setItem('theme', 'light');
-        }
-    }, [isDarkMode]);
-
-    const handleNewChat = () => {
-        createChatDialog.handleOpen();
+    const handleCollapse = () => {
+        setIsCollapsed(!isCollapsed);
+        onCollapseChange?.(!isCollapsed);
     };
 
     const fetchChats = () => {
         chatAPI.getChats({ user_id: user?.id }).then((response) => {
             const sortedChats = response.data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-            setChats(sortedChats);
+            setAllChats(sortedChats);
+            setVisibleChats(sortedChats.slice(0, CHATS_PER_PAGE));
         }).catch((error) => {
             console.log(error);
         });
+    };
+
+    const loadMoreChats = () => {
+        const nextPage = page + 1;
+        const nextChats = allChats.slice(0, nextPage * CHATS_PER_PAGE);
+        setVisibleChats(nextChats);
+        setPage(nextPage);
     };
 
     useEffect(() => {
@@ -93,16 +85,14 @@ function Sidebar({ setSelectedChat, onCollapseChange }) {
         }
     }, [user?.id]);
 
-    const handleChatCreated = (newChat) => {
-        fetchChats();
-        setSelectedChat(newChat.id);
-        createChatDialog.handleClose();
-    };
-
     const handleConfirmDelete = () => {
         if (chatToDelete) {
             chatAPI.deleteChat(chatToDelete.id).then(() => {
-                setChats((prevChats) => prevChats.filter(chat => chat.id !== chatToDelete.id));
+                setAllChats((prevChats) => {
+                    const updatedChats = prevChats.filter(chat => chat.id !== chatToDelete.id);
+                    setVisibleChats(updatedChats.slice(0, page * CHATS_PER_PAGE));
+                    return updatedChats;
+                });
                 setChatToDelete(null);
                 setShowDeleteDialog(false);
             }).catch((error) => {
@@ -111,45 +101,43 @@ function Sidebar({ setSelectedChat, onCollapseChange }) {
         }
     };
 
-    const handleCollapse = () => {
-        setIsCollapsed(!isCollapsed);
-        onCollapseChange?.(!isCollapsed);
-    };
+    const hasMoreChats = allChats.length > visibleChats.length;
 
     return (
         <>
             {user && (
-                <div className={`flex flex-col h-screen min-h-full bg-gray-900 dark:bg-gray-100 border-r border-gray-800 dark:border-gray-200 relative transition-all duration-300 
-                    ${isCollapsed ? 'w-16' : 'w-64'}`}>
-
+                <div className={`flex flex-col h-screen min-h-full bg-gray-900 dark:bg-gray-100 
+                                border-r border-gray-800 dark:border-gray-200 relative transition-all 
+                                duration-300 ${isCollapsed ? 'w-16' : 'w-64'}`}>
                     {/* Toggle Collapse Button */}
                     <button
                         onClick={handleCollapse}
-                        className="absolute -right-3 top-4 bg-gray-800 dark:bg-gray-200 rounded-full p-1 hover:bg-gray-700 dark:hover:bg-gray-300 z-10"
+                        className="absolute -right-3 top-4 bg-gray-800 dark:bg-gray-200 rounded-full p-1
+                                 hover:bg-gray-700 dark:hover:bg-gray-300 z-10"
                     >
-                        {isCollapsed ?
-                            <ChevronRight className="w-4 h-4 text-gray-400 dark:text-gray-600" /> :
+                        {isCollapsed ? (
+                            <ChevronRight className="w-4 h-4 text-gray-400 dark:text-gray-600" />
+                        ) : (
                             <ChevronLeft className="w-4 h-4 text-gray-400 dark:text-gray-600" />
-                        }
+                        )}
                     </button>
 
                     {/* Create New Chat Button */}
                     <div className="p-4">
                         {isCollapsed ? (
                             <button
-                                onClick={handleNewChat}
-                                className="w-full flex justify-center p-2 text-white dark:text-white bg-blue-600 rounded-lg
-                                         hover:bg-blue-700 transition-colors duration-200"
+                                onClick={onNewChat}
+                                className="w-full flex justify-center p-2 text-white dark:text-white
+                                         bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors duration-200"
                             >
                                 <PlusIcon className="w-5 h-5" />
                             </button>
                         ) : (
                             <button
-                                onClick={handleNewChat}
-                                className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 text-sm
-                                         font-medium text-white dark:text-white bg-blue-600 rounded-lg hover:bg-blue-700
-                                         transition-colors duration-200 focus:outline-none focus:ring-2
-                                         focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900 dark:focus:ring-offset-gray-100"
+                                onClick={onNewChat}
+                                className="w-full inline-flex items-center justify-center gap-2 px-4 py-3
+                                         text-sm font-medium text-white dark:text-white bg-blue-600
+                                         rounded-lg hover:bg-blue-700 transition-colors duration-200"
                             >
                                 <PlusIcon className="w-5 h-5" />
                                 Create New Chat
@@ -159,31 +147,33 @@ function Sidebar({ setSelectedChat, onCollapseChange }) {
 
                     {/* Chat List */}
                     <div className="flex-1 overflow-y-auto px-2">
-                        {chats.length > 0 ? (
+                        {visibleChats.length > 0 ? (
                             <>
                                 {!isCollapsed && (
-                                    <h1 className="text-gray-400 dark:text-gray-600 text-xs font-semibold uppercase tracking-wider px-3 mb-2">
-                                        Your Chats
-                                    </h1>
+                                    <h2 className="text-gray-400 dark:text-gray-600 text-xs font-semibold
+                                                 uppercase tracking-wider px-3 mb-2">
+                                        Recent Chats
+                                    </h2>
                                 )}
                                 <div className="space-y-1">
-                                    {chats.map((chat) => (
+                                    {visibleChats.map((chat) => (
                                         <div
                                             key={chat.id}
                                             className="flex items-center justify-between p-3 rounded-lg
-                                                     hover:bg-gray-800 dark:hover:bg-gray-200 transition-all duration-200 group cursor-pointer"
+                                                     hover:bg-gray-800 dark:hover:bg-gray-200
+                                                     transition-all duration-200 group cursor-pointer"
                                             onClick={() => setSelectedChat(chat.id)}
                                         >
-                                            <div className="flex items-start gap-3">
-                                                <div className="flex-shrink-0 mt-1">
-                                                    <MessageSquare className="w-4 h-4 text-gray-500 dark:text-gray-400 group-hover:text-blue-400" />
-                                                </div>
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <MessageSquare className="w-4 h-4 text-gray-500
+                                                                        dark:text-gray-400 group-hover:text-blue-400" />
                                                 {!isCollapsed && (
                                                     <div className="flex-1 min-w-0">
-                                                        <h3 className="text-sm font-medium text-gray-200 dark:text-gray-800 group-hover:text-white dark:group-hover:text-gray-600 truncate">
+                                                        <h3 className="text-sm font-medium text-gray-200
+                                                                     dark:text-gray-800 truncate">
                                                             {chat.name || 'Untitled Chat'}
                                                         </h3>
-                                                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-600 group-hover:text-gray-400 dark:group-hover:text-gray-500">
+                                                        <p className="text-xs text-gray-500 dark:text-gray-600 truncate">
                                                             {chat.model}
                                                         </p>
                                                     </div>
@@ -196,14 +186,28 @@ function Sidebar({ setSelectedChat, onCollapseChange }) {
                                                         setChatToDelete(chat);
                                                         setShowDeleteDialog(true);
                                                     }}
-                                                    className="p-1 rounded-lg hover:bg-red-700 transition-colors duration-200"
+                                                    className="p-1 rounded-lg opacity-0 group-hover:opacity-100
+                                                             hover:bg-red-600/20 transition-all duration-200"
                                                 >
-                                                    <Trash2 className="w-4 h-4 text-gray-400 dark:text-gray-500 hover:text-white dark:hover:text-gray-800" />
+                                                    <Trash2 className="w-4 h-4 text-red-400 hover:text-red-500" />
                                                 </button>
                                             )}
                                         </div>
                                     ))}
                                 </div>
+
+                                {/* Load More Button */}
+                                {!isCollapsed && hasMoreChats && (
+                                    <button
+                                        onClick={loadMoreChats}
+                                        className="w-full flex items-center justify-center gap-2 px-4 py-2 mt-2
+                                                 text-xs text-gray-400 hover:text-gray-300 dark:text-gray-600
+                                                 dark:hover:text-gray-500 transition-colors duration-200"
+                                    >
+                                        <ChevronDown className="w-4 h-4" />
+                                        Load More
+                                    </button>
+                                )}
                             </>
                         ) : (
                             <div className="flex flex-col items-center justify-center h-full px-4 py-8">
@@ -226,13 +230,6 @@ function Sidebar({ setSelectedChat, onCollapseChange }) {
                         }}
                         onConfirm={handleConfirmDelete}
                         chatName={chatToDelete?.name}
-                    />
-
-                    {/* Create Chat Dialog */}
-                    <CreateChatDialog
-                        open={createChatDialog.open}
-                        onClose={createChatDialog.handleClose}
-                        onSuccess={handleChatCreated}
                     />
                 </div>
             )}

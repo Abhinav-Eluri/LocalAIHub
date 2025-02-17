@@ -12,4 +12,10 @@ class ClaudeProvider(AIProvider):
         pass
 
     def generate_stream(self, messages: List[Dict[str, str]], model: str) -> Generator:
-        pass
+        with self.client.messages.stream(
+                max_tokens=1024,
+                messages=messages,
+                model=model,
+        ) as stream:
+            for text in stream.text_stream:
+                yield text

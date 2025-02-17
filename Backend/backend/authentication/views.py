@@ -120,18 +120,21 @@ class AIChatViewSet(ModelViewSet):
         super().__init__(*args, **kwargs)
 
         self.OPENAI_MODELS = [
-            "gpt-3.5-turbo","gpt-4o","gpt-4o-mini", "gpt-4", "gpt-4-turbo",
+            "gpt-3.5-turbo", "gpt-4o", "gpt-4o-mini", "gpt-4", "gpt-4-turbo",
             "gpt-3.5-turbo-16k", "gpt-4-32k",
 
         ]
 
         self.CLAUDE_MODELS = [
-            "claude-3-opus", "claude-3-sonnet", "claude-3-haiku"
+            "claude-3-5-sonnet-latest", "claude-3-5-haiku-latest", "claude-3-haiku-20240307"
         ]
 
         self.GEMINI_MODELS = [
             "gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.0-flash-lite-preview-02-05",
             "gemini-1.5-flash-8b", "gemini-1.5-pro"
+        ]
+        self.OLLAMA_MODELS = [
+            "llama3.2", "deepseek-r1"
         ]
 
     def get_provider_for_model(self, model_name: str):
@@ -152,6 +155,11 @@ class AIChatViewSet(ModelViewSet):
             return AIProviderFactory.create_provider(
                 "gemini",
                 os.environ.get("GEMINI_API_KEY")
+            )
+        if model_name in self.OLLAMA_MODELS:
+            return AIProviderFactory.create_provider(
+                "offline",
+                ""
             )
 
         raise ValueError(f"Unsupported model: {model_name}")
@@ -286,6 +294,7 @@ class AIChatViewSet(ModelViewSet):
                 {"error": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
 
 # Badminton
 

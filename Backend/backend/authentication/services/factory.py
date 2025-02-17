@@ -1,4 +1,5 @@
 from .base import AIProvider
+from .offline_ollama import OfflineProvider
 from .openai import OpenAIProvider
 from .claude import ClaudeProvider
 from .gemini import GeminiProvider
@@ -12,7 +13,8 @@ class AIProviderFactory:
         providers = {
             "openai": OpenAIProvider,
             "claude": ClaudeProvider,
-            "gemini": GeminiProvider
+            "gemini": GeminiProvider,
+            "offline": OfflineProvider
         }
 
         if provider_type not in providers:
