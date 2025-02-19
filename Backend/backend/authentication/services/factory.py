@@ -1,4 +1,5 @@
 from .base import AIProvider
+from .cohere import CohereProvider
 from .offline_ollama import OfflineProvider
 from .openai import OpenAIProvider
 from .claude import ClaudeProvider
@@ -14,7 +15,8 @@ class AIProviderFactory:
             "openai": OpenAIProvider,
             "claude": ClaudeProvider,
             "gemini": GeminiProvider,
-            "offline": OfflineProvider
+            "offline": OfflineProvider,
+            "cohere": CohereProvider
         }
 
         if provider_type not in providers:

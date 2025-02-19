@@ -8,7 +8,7 @@ const refreshToken = localStorage.getItem("refreshToken");
 const initialState = {
     user: user || null,  // Load user from storage or default to null
     accessToken: accessToken || null,  // JWT Access Token
-    refreshToken: accessToken || null,  // JWT Refresh Token
+    refreshToken: refreshToken || null,  // JWT Refresh Token
     isAuthenticated: !!user,  // Boolean to track login state
 };
 

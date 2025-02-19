@@ -134,8 +134,9 @@ class AIChatViewSet(ModelViewSet):
             "gemini-1.5-flash-8b", "gemini-1.5-pro"
         ]
         self.OLLAMA_MODELS = [
-            "llama3.2", "deepseek-r1"
+            "llama3.2", "deepseek-r1", "llama3.3"
         ]
+        self.COHERE_MODELS = ["command-r-plus-08-2024", "command-light", "command-light-nightly", "command-nightly", "command-r"]
 
     def get_provider_for_model(self, model_name: str):
         """Get the appropriate provider and API key for a model"""
@@ -160,6 +161,13 @@ class AIChatViewSet(ModelViewSet):
             return AIProviderFactory.create_provider(
                 "offline",
                 ""
+            )
+
+        if model_name in self.COHERE_MODELS:
+            return AIProviderFactory.create_provider(
+                "cohere",
+                os.environ.get('COHERE_API_KEY')
+
             )
 
         raise ValueError(f"Unsupported model: {model_name}")

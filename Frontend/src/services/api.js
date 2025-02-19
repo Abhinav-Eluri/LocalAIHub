@@ -22,7 +22,7 @@ const blacklistToken = async (refreshToken) => {
     try {
         const response = await axios.post(
             `${config.apiUrl}/api/auth/logout/`,
-            { refresh: refreshToken },
+            { refresh_token: refreshToken },
             { validateStatus: status => status < 500 }
         );
         return response.status === 200;

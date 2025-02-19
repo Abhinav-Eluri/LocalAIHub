@@ -41,6 +41,7 @@ const NavBar = () => {
             return;
         }
 
+
         await authAPI.logout({ refresh_token: refreshToken })
         dispatch(logout());
         navigate("/login");
@@ -54,13 +55,13 @@ const NavBar = () => {
     const displayName = user?.first_name ? `Welcome, ${user.first_name}` : "Welcome";
 
     return (
-        <nav className="bg-gray-900 dark:bg-white shadow-lg">
+        <nav className="bg-gray-900 dark:bg-white shadow-lg pl-4 pr-3">
             <div className="max-w-7xl mx-auto">
                 <div className="flex justify-between h-16">
                     {/* Left side - Logo */}
                     <div className="flex items-center">
                         <Link to="/" className="text-xl font-bold text-white dark:text-gray-800">
-                            LOGO
+                            AI HUB
                         </Link>
                     </div>
 

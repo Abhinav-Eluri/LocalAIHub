@@ -4,8 +4,6 @@ import {
     Bot,
     Sparkles,
     Brain,
-    Moon,
-    Sun,
     ChevronRight,
     Star,
     Zap,
@@ -17,12 +15,14 @@ import {
     Video
 } from 'lucide-react';
 import {useSelector} from "react-redux";
+import {useNavigate} from "react-router-dom";
 
 const Home = () => {
 
     const {user} = useSelector((state) => state.auth);
     const [darkMode, setDarkMode] = useState(false);
     const [activeModel, setActiveModel] = useState(0);
+    const navigate = useNavigate();
 
     const toggleDarkMode = () => {
         setDarkMode(!darkMode);
@@ -93,13 +93,11 @@ const Home = () => {
                                         Access multiple AI models in one place. Enhance your productivity with intelligent conversations.
                                     </p>
                                     <div className="flex gap-4">
-                                        <button className="bg-blue-600 text-white px-8 py-3 rounded-full font-medium hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors duration-300 flex items-center">
+                                        <button onClick={() => {navigate("/chat")}} className="bg-blue-600 text-white px-8 py-3 rounded-full font-medium hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors duration-300 flex items-center">
                                             Try Now
                                             <ChevronRight className="ml-2 h-5 w-5" />
                                         </button>
-                                        <button className="bg-white text-gray-900 px-8 py-3 rounded-full font-medium hover:bg-gray-100 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700 transition-colors duration-300">
-                                            Learn More
-                                        </button>
+
                                     </div>
                                 </div>
                             </div>
