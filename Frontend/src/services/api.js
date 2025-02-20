@@ -146,8 +146,12 @@ export const chatAPI = {
     deleteChat: (chatId) =>
         axiosInstance.delete(`/api/chat/${chatId}`),
 
+    searchWithTool: (searchData) =>
+        axiosInstance.post('/api/chat/search/', searchData),
+
 
 };
+
 
 export const badmintonAPI = {
     createSlot: (slotData) =>

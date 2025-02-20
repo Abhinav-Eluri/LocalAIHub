@@ -14,8 +14,8 @@ const CodeBlock = ({ node, inline, className, children, ...props }) => {
     if (isFencedCodeBlock) {
         return (
             <div className="relative group my-2">
-                <pre className="bg-gray-800/95 dark:bg-gray-200/95 rounded-lg p-2 sm:p-3 overflow-x-auto">
-                    <code className="text-gray-200 dark:text-gray-800 font-mono text-[10px] xs:text-xs sm:text-sm" {...props}>
+                <pre className="dark:bg-gray-800/80 bg-black rounded-lg p-2 sm:p-3 overflow-x-auto">
+                    <code className="dark:text-gray-200 text-white font-mono text-[10px] xs:text-xs sm:text-sm" {...props}>
                         {code}
                     </code>
                 </pre>

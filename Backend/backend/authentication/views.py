@@ -8,6 +8,11 @@ from django.http import StreamingHttpResponse
 from dotenv import load_dotenv
 
 from django.utils import timezone
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import HumanMessage
+from langgraph.prebuilt import create_react_agent
+from langgraph.checkpoint.memory import MemorySaver
+
 from psycopg.pq import error_message
 from rest_framework.renderers import BaseRenderer
 from django.utils.timezone import now
@@ -20,6 +25,9 @@ from rest_framework.viewsets import ModelViewSet
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.tokens import RefreshToken, Token, AccessToken
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, IsAdminUser
+
+from langchain_ollama import OllamaLLM
+from langchain_community.tools import DuckDuckGoSearchRun, DuckDuckGoSearchResults
 
 from .models import Product, AIChat, Message, Slot, Participant
 from .serializers import UserSerializer, AIChatSerializer, SlotSerializer
@@ -302,6 +310,35 @@ class AIChatViewSet(ModelViewSet):
                 {"error": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+    @action(detail=False, methods=['post'], authentication_classes=[], permission_classes=[])
+    def search(self, request):
+        message = request.data.get("message")
+        web_search = request.data.get("searchActive")
+        api_key = os.environ.get("OPENAI_API_KEY")
+        # Initialize the OpenAI model with your API key
+        model = ChatOpenAI(model="gpt-3.5-turbo-0125", api_key=api_key)
+
+        # Web search
+        if web_search:
+            memory = MemorySaver()
+            search = DuckDuckGoSearchResults()
+
+            # Define tools for the agent
+            tools = [search]
+
+            agent_executor = create_react_agent(model, tools, checkpointer=memory)
+
+            config = {"configurable": {"thread_id": "abc123"}}
+            response = agent_executor.invoke({"messages": [HumanMessage(content=message)]}, config)
+
+            # Extract the final response message
+            final_message = response["messages"][-1].content
+        else:
+            response = model.invoke([HumanMessage(content=message)])
+            final_message = response.content
+
+        return Response({"message":final_message})
 
 
 # Badminton
