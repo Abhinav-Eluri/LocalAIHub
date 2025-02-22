@@ -10,7 +10,6 @@ const WorkflowCreate = ({ open, onClose, onWorkflowCreated }) => {
     const handleCreateWorkflow = async () => {
         try {
             const response = await workflowAPI.createWorkflow({ name });
-            console.log("response", response);
             setName(''); // Clear the input
             onWorkflowCreated()
             onClose(); // Close the dialog after successful creation
