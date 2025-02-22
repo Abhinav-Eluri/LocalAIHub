@@ -43,7 +43,7 @@ const LogoutProtectedRoute = ({ children }) => {
 };
 
 
-function Routings(props) {
+function Routings() {
     return (
         <Suspense fallback={<Loading />}>
             <Routes>

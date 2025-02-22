@@ -6,7 +6,6 @@ import { useSelector } from "react-redux";
 const WorkflowCreate = ({ open, onClose, onWorkflowCreated }) => {
     // Initialize with empty string to ensure it's controlled from the start
     const [name, setName] = useState('');
-    const { user } = useSelector((state) => state.auth);
 
     const handleCreateWorkflow = async () => {
         try {
