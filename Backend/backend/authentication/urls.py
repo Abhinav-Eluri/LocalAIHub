@@ -5,12 +5,13 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
 
-from .views import AuthViewSet, AIChatViewSet, SlotViewSet
+from .views import AuthViewSet, AIChatViewSet, SlotViewSet, WorkflowViewSet
 
 router = DefaultRouter()
 router.register(r'auth', AuthViewSet, basename='auth')
 router.register(r'chat', AIChatViewSet, basename='aichat')
 router.register(r'slot', SlotViewSet,basename='slot')
+router.register(r'workflow', WorkflowViewSet,basename='workflow')
 
 urlpatterns = [
     path('', include(router.urls)),

@@ -12,7 +12,7 @@ function Home() {
     const createChatDialog = useDialog();
 
     // Theme initialization
-    const [isDarkMode, setIsDarkMode] = useState(() => {
+    const [isDarkMode] = useState(() => {
         const savedTheme = localStorage.getItem('theme');
         return savedTheme === 'dark';
     });

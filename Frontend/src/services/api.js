@@ -129,8 +129,6 @@ export const authAPI = {
     forgotPassword: (email) =>
         axiosInstance.post('/api/auth/reset_password/', { email }),
 
-    getProfile: () =>
-        axiosInstance.get('/api/auth/profile/'),
 };
 
 export const chatAPI = {
@@ -163,3 +161,11 @@ export const badmintonAPI = {
     addParticipant: (participantData) =>
         axiosInstance.post('/api/slot/add_participant/', participantData),
 };
+
+
+export const workflowAPI = {
+    createWorkflow: (workflowData) =>
+        axiosInstance.post('/api/workflow/', workflowData),
+    getWorkflows: () =>
+        axiosInstance.get('/api/workflow/'),
+}

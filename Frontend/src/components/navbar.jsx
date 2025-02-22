@@ -70,6 +70,7 @@ const NavBar = () => {
                         <Link to="/" className="text-gray-300 hover:text-white dark:text-gray-600 dark:hover:text-gray-900">Home</Link>
                         <Link to="/chat" className="text-gray-300 hover:text-white dark:text-gray-600 dark:hover:text-gray-900">Chat</Link>
                         <Link to="/tools/home" className="text-gray-300 hover:text-white dark:text-gray-600 dark:hover:text-gray-900">Tools</Link>
+                        <Link to="/workflows/home" className="text-gray-300 hover:text-white dark:text-gray-600 dark:hover:text-gray-900">Workflows</Link>
                     </div>
 
                     {/* Right side - Auth Buttons and Theme Toggle (Hidden on mobile) */}

@@ -13,6 +13,7 @@
     "@react-spring/web": "^9.7.5",
     "@reduxjs/toolkit": "^2.5.1",
     "@tailwindcss/vite": "^4.0.0",
+    "@xyflow/react": "^12.4.3",
     "axios": "^1.7.9",
     "framer-motion": "^11.18.2",
     "highlight.js": "^11.11.1",

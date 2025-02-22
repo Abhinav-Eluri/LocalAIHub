@@ -1,7 +1,7 @@
 from rest_framework.serializers import ModelSerializer
 from django.contrib.auth import get_user_model
 
-from .models import AIChat, Slot, Message
+from .models import AIChat, Slot, Message, Workflow, Agent, Task
 
 # Uses the Django User model if nothing is set in particular in settings.py
 # Add this AUTH_USER_MODEL = 'authentication.CustomUser' in settings.py to use the CustomUser model
@@ -31,5 +31,23 @@ class AIChatSerializer(ModelSerializer):
 class SlotSerializer(ModelSerializer):
     class Meta:
         model = Slot
+        fields = '__all__'
+
+
+class TaskSerializer(ModelSerializer):
+    class Meta:
+        model = Task
+        fields = '__all__'
+
+class AgentSerializer(ModelSerializer):
+    tasks = TaskSerializer(many=True, read_only=True)
+    class Meta:
+        model = Agent
+        fields = '__all__'
+
+class WorkflowSerializer(ModelSerializer):
+    agents = AgentSerializer(many=True, read_only=True)
+    class Meta:
+        model = Workflow
         fields = '__all__'
 

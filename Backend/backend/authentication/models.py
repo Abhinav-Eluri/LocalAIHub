@@ -18,18 +18,7 @@ class CustomUser(AbstractUser):
     def __str__(self):
         return self.username
 
-class Image(models.Model):
-    image = models.ImageField(upload_to='authentication/images/products/', null=True, blank=True)
-
-
-class Product(models.Model):
-    name = models.CharField(max_length=100)
-    description = models.TextField()
-    price = models.DecimalField(max_digits=10, decimal_places=2)
-    featured = models.BooleanField(default=False)
-    images = models.ManyToManyField(to="Image",related_name="product_images")
-    def __str__(self):
-       return self.name
+# Chat
 
 class AIChat(models.Model):
     name = models.CharField(max_length=256)
@@ -38,7 +27,6 @@ class AIChat(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
-
 
 class Message(models.Model):
     SENDER_TYPES = (
@@ -65,10 +53,6 @@ class Message(models.Model):
     def __str__(self):
         return f"{self.message_type} - {self.chat.name}"
 
-
-
-
-
 # Badminton
 class Slot(models.Model):
     game_date = models.DateTimeField(verbose_name="Date")
@@ -80,7 +64,6 @@ class Slot(models.Model):
         end_time = start_time + timedelta(hours=float(self.duration))
         return f"{start_time.strftime('%Y-%m-%d %H:%M')} - {end_time.strftime('%H:%M')} ({self.max_participants} max)"
 
-
 class Participant(models.Model):
     name = models.CharField(max_length=150)
     slot = models.ForeignKey(Slot, on_delete=models.CASCADE, related_name='participants')
@@ -89,8 +72,37 @@ class Participant(models.Model):
     def __str__(self):
         return self.name
 
+# Workflow
 
+class Workflow(models.Model):
+    name = models.CharField(max_length=256)
+    description = models.TextField(null=True, blank=True)
+    user = models.ForeignKey(CustomUser, null=True, blank=True, related_name="workflows", on_delete=models.CASCADE)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True)
 
+class Agent(models.Model):
+    name = models.CharField(max_length=256, default=None)
+    role = models.CharField(max_length=1000, default=None)
+    goal = models.TextField(default="")
+    backstory = models.TextField(default="")
+    workflow = models.ForeignKey(Workflow, null=True, blank=True, related_name="agents", on_delete=models.CASCADE)
+    config = models.JSONField()
+
+class Task(models.Model):
+    name = models.CharField(max_length=256)
+    description = models.TextField()
+    agent = models.ForeignKey(Agent, null=True, blank=True, related_name="tasks", on_delete=models.CASCADE)
+    config = models.JSONField()
+
+class Execution(models.Model):
+    workflow = models.ForeignKey(Workflow, null=True, blank=True, related_name="executions", on_delete=models.CASCADE)
+    status = models.CharField(max_length=256)
+    result = models.JSONField()
+    start_time = models.DateTimeField(auto_now_add=True)
+    end_time = models.DateTimeField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
 
 
 

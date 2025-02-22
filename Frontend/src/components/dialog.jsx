@@ -33,7 +33,7 @@ export function DialogTitle({ children }) {
     return <h2 className="text-lg font-semibold pb-2 text-black">{children}</h2>;
 }
 
-export function DialogContent({ children }) {
+export function DialogContent({ children}) {
     return <div className="m-4 flex-1 overflow-y-auto">{children}</div>; // Flex-1 and scrollable content
 }
 

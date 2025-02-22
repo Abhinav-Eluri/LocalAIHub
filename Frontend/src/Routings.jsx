@@ -16,6 +16,7 @@ const Contact = lazy(() => import("./pages/contact.jsx"));
 const ChatGPTHome = lazy(() => import("./pages/chatgpt/Home.jsx"));
 const BadmintonHome = lazy(() => import("./pages/badminton/Home.jsx"));
 const ToolsHome = lazy(() => import("./pages/tools/Home.jsx"));
+const WorkflowsHome = lazy(() => import("./pages/workflow/Home.jsx"));
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
     // Replace this with your actual authentication logic
@@ -57,6 +58,7 @@ function Routings(props) {
                 <Route path="/badminton/home" element={<BadmintonHome />} />
                 <Route path="/badminton/create" element={<CreateSlot />} />
                 <Route path="/tools/home" element={<LogoutProtectedRoute><ToolsHome /></LogoutProtectedRoute>} />
+                <Route path="/workflows/home" element={<LogoutProtectedRoute><WorkflowsHome /></LogoutProtectedRoute>} />
             </Routes>
         </Suspense>
     );

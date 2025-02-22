@@ -1,36 +1,32 @@
 import json
 import os
-from http.client import responses
+
 
 import openai
-from django.core.exceptions import ObjectDoesNotExist
 from django.http import StreamingHttpResponse
 from dotenv import load_dotenv
 
-from django.utils import timezone
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage
 from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import MemorySaver
 
-from psycopg.pq import error_message
 from rest_framework.renderers import BaseRenderer
 from django.utils.timezone import now
-from rest_framework import mixins, status
-from rest_framework.decorators import action, renderer_classes
+from rest_framework import status
+from rest_framework.decorators import action
 from django.contrib.auth import get_user_model
 from django.contrib.auth import authenticate
 from rest_framework.status import HTTP_201_CREATED
 from rest_framework.viewsets import ModelViewSet
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework_simplejwt.tokens import RefreshToken, Token, AccessToken
+from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, IsAdminUser
 
-from langchain_ollama import OllamaLLM
 from langchain_community.tools import DuckDuckGoSearchRun, DuckDuckGoSearchResults
 
-from .models import Product, AIChat, Message, Slot, Participant
-from .serializers import UserSerializer, AIChatSerializer, SlotSerializer
+from .models import AIChat, Message, Slot, Participant, Workflow, Agent, Task, Execution
+from .serializers import UserSerializer, AIChatSerializer, SlotSerializer, WorkflowSerializer
 from rest_framework.response import Response
 
 from .services.factory import AIProviderFactory
@@ -399,3 +395,23 @@ class SlotViewSet(ModelViewSet):
                 {"error": "Failed to add participant"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class WorkflowViewSet(ModelViewSet):
+    queryset = Workflow.objects.all()
+    serializer_class = WorkflowSerializer
+    permission_classes = [IsAuthenticated]
+
+    def create(self, request, *args, **kwargs):
+        user = request.user
+        workflow = Workflow(
+            name=request.data.get("name"),
+            description=request.data.get("description"),
+            user=user
+        )
+        workflow.save()
+
+        return Response(WorkflowSerializer(workflow).data, status=HTTP_201_CREATED)
+
+    # Run the workflow
+

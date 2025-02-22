@@ -10,10 +10,10 @@ function App() {
     const shouldShowNavbar = !noNavbarRoutes.includes(location.pathname);
 
     return (
-        <>
+        <div style={{height:"100vh", width:"100vw"}}>
             {shouldShowNavbar && <NavBar />}
             <Routings />
-        </>
+        </div>
     );
 }
 
