@@ -413,5 +413,30 @@ class WorkflowViewSet(ModelViewSet):
 
         return Response(WorkflowSerializer(workflow).data, status=HTTP_201_CREATED)
 
+    @action(detail=True, methods=['put'])
+    def save(self, request, pk=None):
+        nodes = request.data.get("nodes")
+        edges = request.data.get("edges")
+
+        workflow = Workflow.objects.get(id=pk)
+        agents = []
+        for node in nodes:
+            if node["data"]["type"] == "agent":
+                agent = Agent(
+                    name=node["data"]["name"],
+                    role=node["data"]["role"],
+                    goal=node["data"]["goal"],
+                    backstory=node["data"]["backstory"],
+                    workflow=workflow,
+                    agent_id=node["id"]
+                )
+                agent.save()
+                agents.append(agent)
+        for node in nodes:
+            if node["type"] == "task":
+                pass
+
+
+
     # Run the workflow
 

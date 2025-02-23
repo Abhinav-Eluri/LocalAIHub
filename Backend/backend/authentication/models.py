@@ -89,6 +89,7 @@ class Agent(models.Model):
     backstory = models.TextField(default="")
     workflow = models.ForeignKey(Workflow, null=True, blank=True, related_name="agents", on_delete=models.CASCADE)
     config = models.JSONField()
+    agent_id = models.CharField(max_length=256, default=None)
 
 class Task(models.Model):
     name = models.CharField(max_length=256)

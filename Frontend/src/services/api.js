@@ -168,4 +168,6 @@ export const workflowAPI = {
         axiosInstance.post('/api/workflow/', workflowData),
     getWorkflows: () =>
         axiosInstance.get('/api/workflow/'),
+    saveWorkflow: (workflowId, workflowData) =>
+        axiosInstance.put(`/api/workflow/${workflowId}/save/`, workflowData),
 }

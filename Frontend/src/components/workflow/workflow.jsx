@@ -1,4 +1,4 @@
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {
     addEdge,
     Background,
@@ -13,6 +13,7 @@ import '@xyflow/react/dist/style.css'
 import CreateEntity from "../dialogs/create-entity.jsx";
 import {useDialog} from "../../hooks/use-dialog.js";
 import {useSelector} from "react-redux";
+import {workflowAPI} from "../../services/api.js";
 
 // Node styling constants
 const AGENT_NODE_STYLE = {
@@ -121,6 +122,13 @@ function Workflow(props) {
     };
     console.log("nodes", nodes)
     console.log("Edges", edges)
+
+    function handleSave() {
+        workflowAPI.saveWorkflow(workflowId, {nodes:nodes,edges:edges})
+    }
+
+
+
     return (
         <>
             <ReactFlow
@@ -147,6 +155,7 @@ function Workflow(props) {
                     </button>
                 </Panel>
                 <Panel position="top-right">
+                    <button onClick={handleSave} className="mr-3 rounded-full bg-green-400 px-3 py-1"> Save</button>
                     <button className="bg-violet-400 text-white px-3 mr-10 py-1 rounded-full">Execute</button>
                 </Panel>
                 <Background/>

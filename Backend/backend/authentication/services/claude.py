@@ -13,7 +13,7 @@ class ClaudeProvider(AIProvider):
 
     def generate_stream(self, messages: List[Dict[str, str]], model: str) -> Generator:
         with self.client.messages.stream(
-                max_tokens=1024,
+                max_tokens=5000,
                 messages=messages,
                 model=model,
         ) as stream:
