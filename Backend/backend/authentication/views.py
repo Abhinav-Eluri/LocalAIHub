@@ -13,7 +13,7 @@ from langgraph.checkpoint.memory import MemorySaver
 
 from rest_framework.renderers import BaseRenderer
 from django.utils.timezone import now
-from rest_framework import status
+from rest_framework import status, serializers
 from rest_framework.decorators import action
 from django.contrib.auth import get_user_model
 from django.contrib.auth import authenticate
@@ -26,7 +26,8 @@ from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnl
 from langchain_community.tools import DuckDuckGoSearchRun, DuckDuckGoSearchResults
 
 from .models import AIChat, Message, Slot, Participant, Workflow, Agent, Task, Execution
-from .serializers import UserSerializer, AIChatSerializer, SlotSerializer, WorkflowSerializer
+from .serializers import UserSerializer, AIChatSerializer, SlotSerializer, WorkflowSerializer, AgentSerializer, \
+    TaskSerializer
 from rest_framework.response import Response
 
 from .services.factory import AIProviderFactory
@@ -413,30 +414,82 @@ class WorkflowViewSet(ModelViewSet):
 
         return Response(WorkflowSerializer(workflow).data, status=HTTP_201_CREATED)
 
+    def _update_or_create_agent(self, agent_id, agent_data, workflow):
+        agent_id = agent_id  # Assuming agent ID is in the 'id' field
+        agent_defaults = {
+            'name': agent_data.get('label'),
+            'role': agent_data.get('role'),
+            'goal': agent_data.get('goal'),
+            'backstory': agent_data.get('backstory'),
+            'config': {},  # Handle config data as needed
+        }
+
+        agent, created = Agent.objects.update_or_create(
+            agent_id=agent_id,  # Look up by the ID
+            workflow=workflow,  # Limit to current workflow
+            defaults=agent_defaults
+        )
+
+        return agent
+
     @action(detail=True, methods=['put'])
     def save(self, request, pk=None):
-        nodes = request.data.get("nodes")
-        edges = request.data.get("edges")
+        try:
+            workflow = self.get_object()
+            data = request.data
 
-        workflow = Workflow.objects.get(id=pk)
-        agents = []
-        for node in nodes:
-            if node["data"]["type"] == "agent":
-                agent = Agent(
-                    name=node["data"]["name"],
-                    role=node["data"]["role"],
-                    goal=node["data"]["goal"],
-                    backstory=node["data"]["backstory"],
-                    workflow=workflow,
-                    agent_id=node["id"]
-                )
-                agent.save()
-                agents.append(agent)
-        for node in nodes:
-            if node["type"] == "task":
-                pass
+            workflow.tasks.all().delete()  # Clear all tasks
+            workflow.agents.all().delete()  # Clear all agents
 
+            nodes_data = data.get('nodes', [])  # data prop has changed, so we need to reflect it here
+            edge_data_all = data.get('edges', [])  # now getting the edges for you
+            agent_data_all = [node for node in nodes_data if node.get('type') == 'agent']
+            task_data_all = [node for node in nodes_data if node.get('type') == 'task']
 
+            # We are only performing operations on the current workflow, it does not matter whether this data has been cleared or not.
+            agent_ids = []
+            task_ids = []
+            # For each agent
+            for agent_data in agent_data_all:
+                try:
+                    agent = self._update_or_create_agent(agent_data["id"], agent_data["data"],
+                                                         workflow)  # now accessing the correct agent data.
+                    agent_ids.append(agent.id)
+                except:
+                    continue  # We will only proceed to perform those action where it succeeds.
 
-    # Run the workflow
+            # For each task, We are only interested in the tasks that have a type or have associated agents.
+            for task_data in task_data_all:
+                try:
+                    task_data_data = task_data.get("data")  # access the correct task data prop
+                    # Get the agent id by looking through the edges
+                    assignee = None
+                    for edge in edge_data_all:
+                        if edge["source"] == task_data["id"]:  # If the source is the node you want
+                            assignee = edge["target"]  # That is the agent that will perform the task
+
+                    # See if assignee exists
+                    agent_assigned = Agent.objects.filter(agent_id=assignee).first()  # Find the assignned object
+
+                    task_object = Task.objects.create(name=task_data_data.get('name'),
+                                                      description=task_data_data.get('description'),
+                                                      workflow=workflow, agent=agent_assigned, config={})
+                    task_object.save()
+                    task_ids.append(task_object.id)  # Save all data
+
+                except:
+                    continue
+
+            return Response({"message": "Workflow saved successfully"}, status=status.HTTP_200_OK)
+
+        except Workflow.DoesNotExist:
+            return Response({"error": "Workflow not found"}, status=status.HTTP_404_NOT_FOUND)
+        except serializers.ValidationError as e:
+            return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            print(e)
+            return Response({"error": "An error occurred during save."},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Run the workflow
 

@@ -88,14 +88,20 @@ class Agent(models.Model):
     goal = models.TextField(default="")
     backstory = models.TextField(default="")
     workflow = models.ForeignKey(Workflow, null=True, blank=True, related_name="agents", on_delete=models.CASCADE)
-    config = models.JSONField()
+    config = models.JSONField(null=True, blank=True)
     agent_id = models.CharField(max_length=256, default=None)
+    next_agent = models.ForeignKey('self', null=True, blank=True, related_name="previous_agent", on_delete=models.CASCADE)
 
 class Task(models.Model):
     name = models.CharField(max_length=256)
     description = models.TextField()
+    workflow = models.ForeignKey(Workflow, null=True, blank=True, related_name="tasks", on_delete=models.CASCADE)
     agent = models.ForeignKey(Agent, null=True, blank=True, related_name="tasks", on_delete=models.CASCADE)
-    config = models.JSONField()
+    config = models.JSONField(null=True, blank=True)
+
+    def __str__(self):
+        return self.name
+
 
 class Execution(models.Model):
     workflow = models.ForeignKey(Workflow, null=True, blank=True, related_name="executions", on_delete=models.CASCADE)

@@ -1,174 +1,226 @@
-import React, {useCallback, useEffect, useState} from 'react';
+// src/components/Workflow/Workflow.jsx
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-    addEdge,
-    Background,
-    Controls,
-    Panel,
-    ReactFlow,
-    useEdgesState,
     useNodesState,
-    SelectionMode
-} from "@xyflow/react";
-import '@xyflow/react/dist/style.css'
-import CreateEntity from "../dialogs/create-entity.jsx";
-import {useDialog} from "../../hooks/use-dialog.js";
-import {useSelector} from "react-redux";
-import {workflowAPI} from "../../services/api.js";
+    useEdgesState,
+    addEdge,
+    ReactFlow,
+    Controls,
+    Background,
+    Position,
+    Handle,
+    Panel
+} from '@xyflow/react';
+import { useSelector } from "react-redux";
+import { toast } from 'react-toastify';
 
-// Node styling constants
-const AGENT_NODE_STYLE = {
-    background: '#4CAF50',
-    color: 'white',
-    border: '1px solid #45a049',
-    borderRadius: '8px',
-    padding: '10px',
-    width: 200,
+import AgentNode from "./NodeComponents/AgentNode";
+import TaskNode from "./NodeComponents/TaskNode";
+import { workflowAPI } from "../../services/api.js";
+import CreateEntity from "../../components/workflow/CreateEntity.jsx"; // Add this import
+import { useDialog } from "../../hooks/use-dialog.js"; // Add this import
+
+// Helper function to generate a random number
+const generateRandomNumber = () => Math.floor(Math.random() * 100);
+
+// Custom node types
+const nodeTypes = {
+    agent: AgentNode,
+    task: TaskNode
 };
 
-const TASK_NODE_STYLE = {
-    background: '#2196F3',
-    color: 'white',
-    border: '1px solid #1e88e5',
-    borderRadius: '8px',
-    padding: '10px',
-    width: 200,
-};
-
-function Workflow(props) {
-    const {user} = useSelector(state => state.auth);
-    const initialNodes = []
-    const initialEdges = []
-    const {workflowId} = props;
-    const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-    const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+function Workflow({ workflowId }) {
+    const [nodes, setNodes, onNodesChange] = useNodesState([]);
+    const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
     const [entityType, setEntityType] = useState(null);
+    const { user } = useSelector(state => state.auth);
+    const createEntity = useDialog(); // Initialize useDialog
 
-    const createEntity = useDialog()
+    useEffect(() => {
+        const loadWorkflowData = async () => {
+            setIsLoading(true);
+            try {
+                const response = await workflowAPI.getWorkflow(workflowId);
+                const data = response.data;
+                console.log("data", data);
+                // Transform agents and tasks into nodes
+                const agentNodes = data.agents.map(agent => ({
+                    id: agent.agent_id, // Use agent_id as the node ID
+                    type: 'agent',
+                    position: { x: generateRandomNumber(), y: generateRandomNumber() },
+                    data: { ...agent, label: agent.role }, // Agent data and role as label
+                }));
 
-    const onConnect = useCallback(
-        (connection) => setEdges((eds) => addEdge(connection, eds)),
-        [setEdges],
-    );
+                const taskNodes = data.tasks.map(task => ({
+                    id: task.id.toString(), // Convert task ID to string
+                    type: 'task',
+                    position: { x: generateRandomNumber(), y: generateRandomNumber() },
+                    data: { ...task, label: task.name }, // Task data and name as label
+                }));
 
-    const handleEntityDialogOpen = (type) => {
+                // Create edges based on agent/task relationships
+                const taskEdges = data.tasks.map(task => { //Filter as needed
+                    if (task.agent) {
+                        return{
+                            id: `edge-${task.id}-${task.agent.agent_id}`, // Unique edge ID
+                            source: task.id.toString(),
+                            target: task.agent.agent_id,
+                            animated: true
+                        }
+                    }
+                });
+                console.log("taskEdges", taskEdges);
+
+                // Set the nodes and edges state
+                setNodes([...agentNodes, ...taskNodes]);
+                setEdges(taskEdges);
+            } catch (error) {
+                toast.error("Error loading workflow");
+                console.error("Error loading workflow", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        loadWorkflowData();
+    }, [workflowId, setNodes, setEdges]);
+
+    const generateNodeId = useCallback((type) => {
+        const timestamp = Date.now();
+        const randomString = Math.random().toString(36).substring(2, 8);
+        return `${type}-${timestamp}-${randomString}`;
+    }, []);
+
+    const handleAddAgent = useCallback(() => {
+        const newNode = {
+            id: generateNodeId("agent"),
+            type: "agent",
+            data: { label: "New Agent" },
+            position: { x: generateRandomNumber(), y: generateRandomNumber() },
+        };
+        setNodes((nds) => [...nds, newNode]);
+    }, [setNodes, generateNodeId]);
+
+    const handleAddTask = useCallback(() => {
+        const newNode = {
+            id: generateNodeId("task"),
+            type: "task",
+            data: { label: "New Task" },
+            position: { x: generateRandomNumber(), y: generateRandomNumber() },
+        };
+        setNodes((nds) => [...nds, newNode]);
+    }, [setNodes, generateNodeId]);
+
+    const handleEntityDialogOpen = useCallback((type) => {
         setEntityType(type);
         createEntity.handleOpen();
-    };
+    }, [createEntity, setEntityType]);
 
-    // Function to generate a unique node ID
-    const generateNodeId = (type) => {
-        const timestamp = Date.now();
-        return `${type}-${timestamp}`;
-    };
-
-    // Function to calculate new node position
-    const calculateNewNodePosition = () => {
-        // Get the current number of nodes to offset new nodes
-        const offset = nodes.length * 50;
-        return {
-            x: 100 + offset,
-            y: 100 + offset
-        };
-    };
-
-    const createNewNode = (formData) => {
-        const { x, y } = calculateNewNodePosition();
-        const isAgent = entityType === 'agent';
+    const handleCreateEntitySubmit = useCallback((formData) => {
+        const position = { x: generateRandomNumber(), y: generateRandomNumber() };
         const nodeId = generateNodeId(entityType);
-
+        let label = "";
+        if (entityType === "agent") {
+            label = formData.role;
+        } else {
+            label = formData.name;
+        }
         const newNode = {
             id: nodeId,
-            type: 'default', // You can create custom node types if needed
-            position: { x, y },
-            data: {
-                label: isAgent ? formData.role : formData.name,
-                ...formData,
-                createdAt: new Date().toISOString(),
-                createdBy: `${user?.first_name}`, // Using the current user's login
-                type: entityType,
-            },
-            style: isAgent ? AGENT_NODE_STYLE : TASK_NODE_STYLE,
+            type: entityType,
+            position: position,
+            data: { ...formData, label: label },
         };
 
-        // Add metadata to help with node management
-        newNode.data.metadata = {
-            created: new Date().toISOString(),
-            lastModified: new Date().toISOString(),
-            version: 1,
-        };
-
-        setNodes((prevNodes) => [...prevNodes, newNode]);
-        return nodeId;
-    };
-
-    const handleEntityCreate = (formData) => {
-        const nodeId = createNewNode(formData);
-
-        // If this is a task and it has selected agents, create edges
-        if (entityType === 'task' && formData.selectedAgents) {
-            const newEdges = formData.selectedAgents.map(agentId => ({
-                id: `edge-${agentId}-${nodeId}`,
-                source: agentId,
-                target: nodeId,
-                type: 'default',
+        setNodes(prevNodes => [...prevNodes, newNode]);
+        // Create edge if it's a task and an agent is selected
+        if (entityType === 'task' && formData.agent) {
+            const newEdge = {
+                id: `edge-${nodeId}-${formData.agent}`,
+                source: nodeId,
+                target: formData.agent,
                 animated: true,
-                style: { stroke: '#888' },
-            }));
-
-            setEdges((prevEdges) => [...prevEdges, ...newEdges]);
+            };
+            setEdges((prevEdges) => [...prevEdges, newEdge]);
         }
-
         createEntity.handleClose();
-    };
-    console.log("nodes", nodes)
-    console.log("Edges", edges)
 
-    function handleSave() {
-        workflowAPI.saveWorkflow(workflowId, {nodes:nodes,edges:edges})
-    }
+    }, [entityType, setNodes, generateNodeId, createEntity, setEdges]);
 
+    const onConnect = useCallback((params) => {
+        setEdges((eds) => addEdge(params, eds));
+    }, [setEdges]);
 
+    const handleSave = useCallback(async () => {
+        try {
+            setIsSaving(true);
+            await workflowAPI.saveWorkflow(workflowId, {
+                nodes,
+                edges,
+            });
+            toast.success('Workflow saved successfully');
+        } catch (error) {
+            toast.error('Failed to save workflow');
+            console.error('Error saving workflow:', error);
+        } finally {
+            setIsSaving(false);
+        }
+    }, [workflowId, nodes, edges, user]);
 
     return (
-        <>
-            <ReactFlow
-                nodes={nodes}
-                edges={edges}
-                onEdgesChange={onEdgesChange}
-                onNodesChange={onNodesChange}
-                onConnect={onConnect}
-                panOnScroll
-                selectionOnDrag
-                selectionMode={SelectionMode.Partial}
-                fitView
-            >
-                <Panel position="top-left">
-                    <button
-                        className="bg-black text-white px-3 py-1 rounded-full ml-5 mr-1"
-                        onClick={() => handleEntityDialogOpen('agent')}
-                    >+ Agent
-                    </button>
-                    <button
-                        className="bg-black text-white px-3 py-1 rounded-full"
-                        onClick={() => handleEntityDialogOpen('task')}
-                    >+ Task
-                    </button>
-                </Panel>
-                <Panel position="top-right">
-                    <button onClick={handleSave} className="mr-3 rounded-full bg-green-400 px-3 py-1"> Save</button>
-                    <button className="bg-violet-400 text-white px-3 mr-10 py-1 rounded-full">Execute</button>
-                </Panel>
-                <Background/>
-                <Controls position="top-right"/>
-            </ReactFlow>
+        <div style={{ display: 'flex' }}>
+            <div style={{ width: '100%', height: '600px' }}>
+                <ReactFlow
+                    nodes={nodes}
+                    edges={edges}
+                    onNodesChange={onNodesChange}
+                    onEdgesChange={onEdgesChange}
+                    onConnect={onConnect}
+                    fitView
+                    nodeTypes={nodeTypes}
+                >
+                    <Controls />
+                    <Background variant="dots" gap={12} size={1} />
+                    <Panel position="top-left">
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => handleEntityDialogOpen('agent')}
+                                className="px-4 py-2 bg-blue-500 text-white rounded"
+                            >
+                                Add Agent
+                            </button>
+                            <button
+                                onClick={() => handleEntityDialogOpen('task')}
+                                className="px-4 py-2 bg-blue-500 text-white rounded"
+                            >
+                                Add Task
+                            </button>
+                        </div>
+                    </Panel>
+                    <Panel position="bottom-right">
+                        <div className="flex gap-2">
+                            <button
+                                onClick={handleSave}
+                                disabled={isSaving}
+                                className="px-4 py-2 bg-blue-500 text-white rounded"
+                            >
+                                {isSaving ? 'Saving...' : 'Save'}
+                            </button>
+                        </div>
+                    </Panel>
+                </ReactFlow>
+            </div>
+            {/* Add CreateEntity Dialog here */}
             <CreateEntity
                 open={createEntity.open}
                 onClose={createEntity.handleClose}
                 entityType={entityType}
                 nodes={nodes}
-                onSubmit={handleEntityCreate}
+                onSubmit={handleCreateEntitySubmit}
             />
-        </>
+        </div>
     );
 }
 

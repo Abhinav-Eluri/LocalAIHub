@@ -33,19 +33,21 @@ class SlotSerializer(ModelSerializer):
         model = Slot
         fields = '__all__'
 
-
-class TaskSerializer(ModelSerializer):
-    class Meta:
-        model = Task
-        fields = '__all__'
-
 class AgentSerializer(ModelSerializer):
-    tasks = TaskSerializer(many=True, read_only=True)
     class Meta:
         model = Agent
         fields = '__all__'
 
+class TaskSerializer(ModelSerializer):
+    agent = AgentSerializer(many=False, read_only=True)
+    class Meta:
+        model = Task
+        fields = '__all__'
+
+
+
 class WorkflowSerializer(ModelSerializer):
+    tasks = TaskSerializer(many=True)
     agents = AgentSerializer(many=True, read_only=True)
     class Meta:
         model = Workflow
